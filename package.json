@@ -6,6 +6,12 @@
   "overrides": {
     "vite-plugin-pwa": {
       "vite": "$vite"
+    },
+    "serialize-javascript": "7.0.5"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": "7.0.5"
     }
   },
   "scripts": {
