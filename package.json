@@ -9,11 +9,6 @@
     },
     "serialize-javascript": "7.0.5"
   },
-  "pnpm": {
-    "overrides": {
-      "serialize-javascript": "7.0.5"
-    }
-  },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -21,18 +16,18 @@
   },
   "dependencies": {
     "lucide-react": "^1.8.0",
-    "react": "latest",
-    "react-dom": "latest",
-    "uuid": "latest",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "uuid": "^14.0.0",
     "workbox-window": "^7.4.0",
-    "zustand": "latest"
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
-    "@vitejs/plugin-react": "latest",
-    "typescript": "latest",
-    "vite": "latest",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.8",
     "vite-plugin-pwa": "^1.2.0"
   }
 }
