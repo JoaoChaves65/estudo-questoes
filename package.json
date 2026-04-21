@@ -13,6 +13,7 @@
     "react": "latest",
     "react-dom": "latest",
     "uuid": "latest",
+    "workbox-window": "^7.4.0",
     "zustand": "latest"
   },
   "devDependencies": {
@@ -20,6 +21,7 @@
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
     "typescript": "latest",
-    "vite": "latest"
+    "vite": "latest",
+    "vite-plugin-pwa": "^1.2.0"
   }
 }
