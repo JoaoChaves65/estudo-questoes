@@ -26,6 +26,7 @@ export function ImportPage({
   );
   const previewQuestoes = resultadoPreview.questoes;
   const errosPreview = resultadoPreview.erros;
+  const avisosPreview = resultadoPreview.avisos;
 
   const handleProcessar = () => {
     if (errosPreview.length > 0) {
@@ -45,7 +46,13 @@ export function ImportPage({
     }
 
     setErro('');
-    setMensagem(`${quantidade} questão(ões) adicionada(s) em ${disciplina.nome}.`);
+    if (avisosPreview.length > 0) {
+      setMensagem(
+        `${quantidade} questão(ões) adicionada(s) em ${disciplina.nome}, com ${avisosPreview.length} aviso(s) de parsing para revisão.`,
+      );
+    } else {
+      setMensagem(`${quantidade} questão(ões) adicionada(s) em ${disciplina.nome}.`);
+    }
     setTextoBruto('');
     setExpandidas({});
   };
@@ -132,6 +139,22 @@ Justificativa: GABARITO: A FEEDBACK/COMENTÁRIO: Explique aqui por que a alterna
             </ul>
             <p className="muted">
               Enquanto houver problema de enunciado, alternativas ou gabarito, o sistema nao salva.
+            </p>
+          </div>
+        ) : null}
+
+        {avisosPreview.length > 0 ? (
+          <div className="parser-warning-box">
+            <h3>Avisos de parsing</h3>
+            <ul className="parser-warning-list">
+              {avisosPreview.map((avisoQuestao) => (
+                <li key={`${avisoQuestao.numeroQuestao}-${avisoQuestao.indice}-${avisoQuestao.motivo}`}>
+                  <strong>Questão {avisoQuestao.numeroQuestao}:</strong> {avisoQuestao.motivo}
+                </li>
+              ))}
+            </ul>
+            <p className="muted">
+              O salvamento continua liberado, mas vale revisar a prévia para evitar ambiguidades.
             </p>
           </div>
         ) : null}
