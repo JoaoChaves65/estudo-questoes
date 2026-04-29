@@ -28,9 +28,11 @@ export function QuestionStudyCard({
 
       <div className="alternativas-list">
         {questao.alternativas.map((alternativa) => {
-          const acertou = respostaSelecionada === alternativa.letra &&
+          const acertou =
+            respostaSelecionada === alternativa.letra &&
             alternativa.letra === questao.respostaCorreta;
-          const errou = respostaSelecionada === alternativa.letra &&
+          const errou =
+            respostaSelecionada === alternativa.letra &&
             alternativa.letra !== questao.respostaCorreta;
           const corretaRevelada =
             respostaSelecionada !== null &&
