@@ -107,6 +107,7 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
   const [questoesErradas, setQuestoesErradas] = useState<string[]>([]);
   const [acertos, setAcertos] = useState(0);
   const [erros, setErros] = useState(0);
+  const [puladas, setPuladas] = useState(0);
   const [modoFoco, setModoFoco] = useState(false);
 
   const reiniciarSessao = (base: Questao[]) => {
@@ -116,6 +117,7 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
     setQuestoesErradas([]);
     setAcertos(0);
     setErros(0);
+    setPuladas(0);
   };
 
   useEffect(() => {
@@ -152,6 +154,15 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
         ? estadoAtual
         : [...estadoAtual, questaoAtual.id],
     );
+  };
+
+  const handlePular = () => {
+    if (!questaoAtual || respostaSelecionada !== null) {
+      return;
+    }
+
+    setPuladas((valorAtual) => valorAtual + 1);
+    setIndiceAtual((valorAtual) => valorAtual + 1);
   };
 
   const handleProxima = () => {
@@ -213,6 +224,10 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
             <span className="muted">Erros</span>
             <strong className="text-error">{erros}</strong>
           </div>
+          <div className="card stat-card">
+            <span className="muted">Puladas</span>
+            <strong>{puladas}</strong>
+          </div>
         </section>
       ) : null}
 
@@ -227,7 +242,8 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
         <section className="card final-card">
           <h2>Sessão concluída</h2>
           <p>
-            Você terminou a sessão com {acertos} acerto(s) e {erros} erro(s).
+            Você terminou a sessão com {acertos} acerto(s), {erros} erro(s) e {puladas} questão(ões)
+            pulada(s).
           </p>
 
           <div className="actions-row">
@@ -268,6 +284,14 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
           />
 
           <div className="actions-row actions-row--end">
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={handlePular}
+              disabled={respostaSelecionada !== null}
+            >
+              Pular
+            </button>
             <button
               type="button"
               className="button"
