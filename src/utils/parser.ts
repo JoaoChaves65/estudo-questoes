@@ -1,9 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import type { Alternativa, Questao, QuestaoParseErro, ResultadoParseQuestoes } from '../types';
+import type {
+  Alternativa,
+  Questao,
+  QuestaoParseAviso,
+  QuestaoParseErro,
+  ResultadoParseQuestoes,
+} from '../types';
 
 const REGEX_GABARITO = /GABARITO\s*:\s*([A-Z])/i;
 const REGEX_FEEDBACK = /FEEDBACK\/COMENT[ÁA]RIO\s*:/i;
+const REGEX_QUESTAO_INICIO = /^\s*(\d+)\)\s+/gm;
+const REGEX_ALTERNATIVA_INICIO = /^\s*([A-E])\)\s*/gm;
 
 function normalizarTextoBase(texto: string): string {
   return texto
@@ -28,39 +36,14 @@ function primeiroIndiceValido(...indices: number[]): number {
   return validos.length > 0 ? Math.min(...validos) : -1;
 }
 
-function detectarIniciosDeQuestoes(texto: string): number[] {
-  const marcadores = [...texto.matchAll(/(\d+)\)/g)];
-  const indices: number[] = [];
-
-  for (let i = 0; i < marcadores.length; i += 1) {
-    const marcadorAtual = marcadores[i];
-    const inicioAtual = marcadorAtual.index ?? -1;
-
-    if (inicioAtual < 0) {
-      continue;
-    }
-
-    const proximoInicio = marcadores[i + 1]?.index ?? texto.length;
-    const blocoCandidato = texto.slice(inicioAtual, proximoInicio);
-    const possuiAlternativaA = /A\)\s*/i.test(blocoCandidato);
-    const possuiGabarito = REGEX_GABARITO.test(blocoCandidato);
-
-    if (possuiAlternativaA && possuiGabarito) {
-      indices.push(inicioAtual);
-    }
-  }
-
-  return indices;
-}
-
 function detectarMarcadoresNumerados(texto: string): number[] {
-  return [...texto.matchAll(/(\d+)\)/g)]
+  return [...texto.matchAll(REGEX_QUESTAO_INICIO)]
     .map((match) => match.index ?? -1)
     .filter((indice) => indice >= 0);
 }
 
 function extrairAlternativas(secao: string): Alternativa[] {
-  const correspondencias = [...secao.matchAll(/([A-Z])\)\s*/g)];
+  const correspondencias = [...secao.matchAll(REGEX_ALTERNATIVA_INICIO)];
 
   if (correspondencias.length === 0) {
     return [];
@@ -83,52 +66,135 @@ function extrairAlternativas(secao: string): Alternativa[] {
     .filter((alternativa) => alternativa.texto.length > 0);
 }
 
+type GrupoAlternativas = {
+  inicio: number;
+  fim: number;
+  alternativas: Alternativa[];
+};
+
+function extrairGruposAlternativas(secao: string): GrupoAlternativas[] {
+  const correspondencias = [...secao.matchAll(REGEX_ALTERNATIVA_INICIO)];
+
+  if (correspondencias.length === 0) {
+    return [];
+  }
+
+  const grupos: GrupoAlternativas[] = [];
+
+  for (let i = 0; i < correspondencias.length; i += 1) {
+    const match = correspondencias[i];
+    if (match[1].toUpperCase() !== 'A') {
+      continue;
+    }
+
+    const inicio = match.index ?? 0;
+    let ultimoIndiceNoGrupo = i;
+    let letraEsperada = 'B'.charCodeAt(0);
+
+    for (let j = i + 1; j < correspondencias.length; j += 1) {
+      const letraAtual = correspondencias[j][1].toUpperCase().charCodeAt(0);
+
+      if (letraAtual === letraEsperada) {
+        ultimoIndiceNoGrupo = j;
+        letraEsperada += 1;
+        continue;
+      }
+
+      if (correspondencias[j][1].toUpperCase() === 'A') {
+        break;
+      }
+
+      break;
+    }
+
+    const fim =
+      ultimoIndiceNoGrupo + 1 < correspondencias.length
+        ? (correspondencias[ultimoIndiceNoGrupo + 1].index ?? secao.length)
+        : secao.length;
+    const alternativas = extrairAlternativas(secao.slice(inicio, fim));
+
+    if (alternativas.length >= 2) {
+      grupos.push({
+        inicio,
+        fim,
+        alternativas,
+      });
+    }
+  }
+
+  return grupos;
+}
+
 function extrairQuestao(
   bloco: string,
   indice: number,
-): { questao: Questao | null; erro: QuestaoParseErro | null } {
+): { questao: Questao | null; erro: QuestaoParseErro | null; avisos: QuestaoParseAviso[] } {
   const numeroQuestao = bloco.match(/^\s*(\d+)\)/)?.[1] ?? `${indice + 1}`;
   const corpo = bloco.replace(/^\s*\d+\)\s*/, '').trim();
-  const indiceAlternativaA = corpo.search(/A\)\s*/i);
+  const avisos: QuestaoParseAviso[] = [];
 
-  if (indiceAlternativaA < 0) {
+  const indiceJustificativa = corpo.search(/Justificativa\s*:/i);
+  const indiceGabarito = corpo.search(/GABARITO\s*:/i);
+  const indiceFeedback = corpo.search(REGEX_FEEDBACK);
+  const indiceExplicacao = corpo.search(/Explica[cç][aã]o\s*:/i);
+  const fimAlternativas = primeiroIndiceValido(
+    indiceJustificativa,
+    indiceGabarito,
+    indiceFeedback,
+    indiceExplicacao,
+  );
+
+  const indiceSecaoAlternativas = corpo.search(/^\s*Alternativas?\s*:?/im);
+  const inicioBuscaAlternativas = indiceSecaoAlternativas >= 0 ? indiceSecaoAlternativas : 0;
+  const limiteBuscaAlternativas = fimAlternativas >= 0 ? fimAlternativas : corpo.length;
+  const secaoBusca = corpo.slice(inicioBuscaAlternativas, limiteBuscaAlternativas);
+  const gruposAlternativas = extrairGruposAlternativas(secaoBusca);
+  const grupoEscolhido = gruposAlternativas[gruposAlternativas.length - 1];
+  const possuiBlocosAssociacao =
+    /Bloco\s*1\s*:/i.test(corpo) && /Bloco\s*2\s*:/i.test(corpo);
+
+  if (gruposAlternativas.length > 1 && !possuiBlocosAssociacao) {
+    avisos.push({
+      indice,
+      numeroQuestao,
+      motivo:
+        'Foram encontrados multiplos blocos de alternativas; o parser utilizou o bloco mais proximo do gabarito.',
+    });
+  }
+
+  if (!grupoEscolhido) {
     return {
       questao: null,
       erro: {
         indice,
         numeroQuestao,
-        motivo: 'Nao foi encontrada a alternativa A) nesta questao.',
+        motivo: 'Nao foi encontrada uma secao valida de alternativas (A-E).',
         blocoOriginal: bloco,
       },
+      avisos,
     };
   }
 
-  const indiceJustificativa = corpo.search(/Justificativa\s*:/i);
-  const indiceGabarito = corpo.search(/GABARITO\s*:/i);
-  const indiceFeedback = corpo.search(REGEX_FEEDBACK);
-  const fimAlternativas = primeiroIndiceValido(
-    indiceJustificativa,
-    indiceGabarito,
-    indiceFeedback,
-  );
-
-  const enunciado = limparCampo(corpo.slice(0, indiceAlternativaA));
-  const secaoAlternativas = corpo.slice(
-    indiceAlternativaA,
-    fimAlternativas >= 0 ? fimAlternativas : corpo.length,
-  );
-  const alternativas = extrairAlternativas(secaoAlternativas);
+  const inicioAlternativas = inicioBuscaAlternativas + grupoEscolhido.inicio;
+  const fimAlternativasSelecionado = inicioBuscaAlternativas + grupoEscolhido.fim;
+  const enunciado = limparCampo(corpo.slice(0, inicioAlternativas));
+  const alternativas = grupoEscolhido.alternativas;
   const respostaCorreta = (corpo.match(REGEX_GABARITO)?.[1] ?? '').toUpperCase();
 
   let explicacao = '';
   const matchFeedback = corpo.match(REGEX_FEEDBACK);
+  const matchExplicacao = corpo.match(/Explica[cç][aã]o\s*:/i);
 
   if (matchFeedback?.index !== undefined) {
     explicacao = limparCampo(
       corpo.slice(matchFeedback.index + matchFeedback[0].length),
     );
+  } else if (matchExplicacao?.index !== undefined) {
+    explicacao = limparCampo(
+      corpo.slice(matchExplicacao.index + matchExplicacao[0].length),
+    );
   } else if (indiceGabarito >= 0) {
-    explicacao = limparCampo(corpo.slice(indiceGabarito));
+    explicacao = limparCampo(corpo.slice(indiceGabarito, corpo.length));
   }
 
   if (!enunciado) {
@@ -140,6 +206,7 @@ function extrairQuestao(
         motivo: 'O enunciado da questao nao foi identificado.',
         blocoOriginal: bloco,
       },
+      avisos,
     };
   }
 
@@ -152,6 +219,7 @@ function extrairQuestao(
         motivo: 'Nenhuma alternativa valida foi extraida.',
         blocoOriginal: bloco,
       },
+      avisos,
     };
   }
 
@@ -164,7 +232,33 @@ function extrairQuestao(
         motivo: 'O gabarito nao foi encontrado.',
         blocoOriginal: bloco,
       },
+      avisos,
     };
+  }
+
+  if (!alternativas.some((alternativa) => alternativa.letra === respostaCorreta)) {
+    avisos.push({
+      indice,
+      numeroQuestao,
+      motivo: `O gabarito ${respostaCorreta} nao corresponde as alternativas extraidas.`,
+    });
+  }
+
+  if (indiceSecaoAlternativas < 0 && gruposAlternativas.length > 1 && !possuiBlocosAssociacao) {
+    avisos.push({
+      indice,
+      numeroQuestao,
+      motivo:
+        'Secao "Alternativas" nao foi encontrada; parser aplicou fallback pelo bloco de alternativas mais proximo do gabarito.',
+    });
+  }
+
+  if (inicioAlternativas > fimAlternativasSelecionado) {
+    avisos.push({
+      indice,
+      numeroQuestao,
+      motivo: 'Bloco de alternativas apresenta delimitacao ambigua.',
+    });
   }
 
   return {
@@ -176,6 +270,7 @@ function extrairQuestao(
       explicacao,
     },
     erro: null,
+    avisos,
   };
 }
 
@@ -186,37 +281,13 @@ export function parseQuestoesComDiagnostico(texto: string): ResultadoParseQuesto
     return {
       questoes: [],
       erros: [],
+      avisos: [],
     };
   }
 
-  const inicios = detectarIniciosDeQuestoes(textoNormalizado);
   const marcadoresNumerados = detectarMarcadoresNumerados(textoNormalizado);
 
-  if (inicios.length === 0) {
-    if (marcadoresNumerados.length > 0) {
-      const blocosParciais = marcadoresNumerados.map((inicio, index) =>
-        textoNormalizado.slice(
-          inicio,
-          marcadoresNumerados[index + 1] ?? textoNormalizado.length,
-        ),
-      );
-
-      const resultadosParciais = blocosParciais.map((bloco, index) =>
-        extrairQuestao(bloco, index),
-      );
-
-      const errosEspecificos = resultadosParciais
-        .map((resultado) => resultado.erro)
-        .filter((erro): erro is QuestaoParseErro => erro !== null);
-
-      if (errosEspecificos.length > 0) {
-        return {
-          questoes: [],
-          erros: errosEspecificos,
-        };
-      }
-    }
-
+  if (marcadoresNumerados.length === 0) {
     return {
       questoes: [],
       erros: [
@@ -227,11 +298,12 @@ export function parseQuestoesComDiagnostico(texto: string): ResultadoParseQuesto
           blocoOriginal: textoNormalizado,
         },
       ],
+      avisos: [],
     };
   }
 
-  const blocos = inicios.map((inicio, index) =>
-    textoNormalizado.slice(inicio, inicios[index + 1] ?? textoNormalizado.length),
+  const blocos = marcadoresNumerados.map((inicio, index) =>
+    textoNormalizado.slice(inicio, marcadoresNumerados[index + 1] ?? textoNormalizado.length),
   );
 
   const resultados = blocos.map((bloco, index) => extrairQuestao(bloco, index));
@@ -243,6 +315,7 @@ export function parseQuestoesComDiagnostico(texto: string): ResultadoParseQuesto
     erros: resultados
       .map((resultado) => resultado.erro)
       .filter((erro): erro is QuestaoParseErro => erro !== null),
+    avisos: resultados.flatMap((resultado) => resultado.avisos),
   };
 }
 

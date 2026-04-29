@@ -55,7 +55,14 @@ export type QuestaoParseErro = {
   blocoOriginal: string;
 };
 
+export type QuestaoParseAviso = {
+  indice: number;
+  numeroQuestao: string;
+  motivo: string;
+};
+
 export type ResultadoParseQuestoes = {
   questoes: Questao[];
   erros: QuestaoParseErro[];
+  avisos: QuestaoParseAviso[];
 };
