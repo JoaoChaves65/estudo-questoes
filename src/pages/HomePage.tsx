@@ -6,10 +6,13 @@ import type { Disciplina, ResultadoImportacao } from '../types';
 
 type HomePageProps = {
   disciplinas: Disciplina[];
+  pendentesSrsPorDisciplina: Record<string, number>;
   onCriarDisciplina: (nome: string) => string | null;
   onAbrirCadastro: (disciplinaId: string) => void;
   onAbrirEstudo: (disciplinaId: string) => void;
+  onAbrirEstudoInteligente: (disciplinaId: string) => void;
   onAbrirGerenciamento: () => void;
+  onAbrirDesempenho: () => void;
   onExportarTudo: () => void;
   onExportarDisciplina: (disciplinaId: string) => void;
   onImportarArquivo: (arquivo: File) => Promise<ResultadoImportacao>;
@@ -17,10 +20,13 @@ type HomePageProps = {
 
 export function HomePage({
   disciplinas,
+  pendentesSrsPorDisciplina,
   onCriarDisciplina,
   onAbrirCadastro,
   onAbrirEstudo,
+  onAbrirEstudoInteligente,
   onAbrirGerenciamento,
+  onAbrirDesempenho,
   onExportarTudo,
   onExportarDisciplina,
   onImportarArquivo,
@@ -101,6 +107,9 @@ export function HomePage({
           >
             Exportar tudo
           </button>
+          <button type="button" className="button button--secondary" onClick={onAbrirDesempenho}>
+            Desempenho
+          </button>
         </>
       }
     >
@@ -150,8 +159,10 @@ export function HomePage({
               <DisciplinaCard
                 key={disciplina.id}
                 disciplina={disciplina}
+                pendentesSrs={pendentesSrsPorDisciplina[disciplina.id] ?? 0}
                 onCadastrarQuestoes={onAbrirCadastro}
                 onEstudar={onAbrirEstudo}
+                onEstudarInteligente={onAbrirEstudoInteligente}
                 onExportar={onExportarDisciplina}
               />
             ))}

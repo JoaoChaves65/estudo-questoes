@@ -2,7 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Layout } from '../components/Layout';
 import { QuestionStudyCard } from '../components/QuestionStudyCard';
+import { useDesempenhoStore } from '../store/useDesempenhoStore';
 import type { Disciplina, Questao } from '../types';
+import { prepararQuestaoParaExibicao } from '../utils/studyQuestionDisplay';
 import { shuffleArray } from '../utils/shuffle';
 
 type StudyPageProps = {
@@ -14,93 +16,15 @@ type QuestaoSessao = Questao & {
   sessionKey: string;
 };
 
-function extrairUltimoBlocoCoerente(alternativas: Questao['alternativas']) {
-  const blocos: Questao['alternativas'][] = [];
-
-  for (let i = 0; i < alternativas.length; i += 1) {
-    if (alternativas[i]?.letra !== 'A') {
-      continue;
-    }
-
-    const blocoAtual: Questao['alternativas'] = [alternativas[i]];
-    const usadas = new Set<string>(['A']);
-
-    for (let j = i + 1; j < alternativas.length; j += 1) {
-      const letra = alternativas[j]?.letra;
-
-      if (!letra || usadas.has(letra)) {
-        break;
-      }
-
-      blocoAtual.push(alternativas[j]);
-      usadas.add(letra);
-
-      if (letra === 'E') {
-        break;
-      }
-    }
-
-    if (blocoAtual.length >= 2) {
-      blocos.push(blocoAtual);
-    }
-  }
-
-  return blocos[blocos.length - 1] ?? [];
-}
-
-function normalizarQuestaoLegada(questao: Questao): Questao {
-  const blocoFinal = extrairUltimoBlocoCoerente(questao.alternativas);
-
-  if (blocoFinal.length === 0) {
-    return questao;
-  }
-
-  const letrasValidas = new Set(blocoFinal.map((alternativa) => alternativa.letra));
-  const respostaCorreta = letrasValidas.has(questao.respostaCorreta)
-    ? questao.respostaCorreta
-    : blocoFinal[0]?.letra ?? questao.respostaCorreta;
-
-  return {
-    ...questao,
-    alternativas: blocoFinal,
-    respostaCorreta,
-  };
-}
-
-function embaralharTextosDasAlternativas(questao: Questao): Questao {
-  const textosEmbaralhados = shuffleArray(
-    questao.alternativas.map((alternativa) => ({
-      texto: alternativa.texto,
-      letraOriginal: alternativa.letra,
-    })),
-  );
-
-  const alternativas = questao.alternativas.map((alternativa, index) => ({
-    letra: alternativa.letra,
-    texto: textosEmbaralhados[index]?.texto ?? alternativa.texto,
-  }));
-
-  const novaRespostaCorreta =
-    alternativas.find(
-      (_alternativa, index) =>
-        textosEmbaralhados[index]?.letraOriginal === questao.respostaCorreta,
-    )?.letra ?? questao.respostaCorreta;
-
-  return {
-    ...questao,
-    alternativas,
-    respostaCorreta: novaRespostaCorreta,
-  };
-}
-
 function montarSessao(questoes: Questao[]): QuestaoSessao[] {
   return shuffleArray(questoes).map((questao, index) => ({
-    ...embaralharTextosDasAlternativas(normalizarQuestaoLegada(questao)),
+    ...prepararQuestaoParaExibicao(questao),
     sessionKey: `${questao.id}-${index}`,
   }));
 }
 
 export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
+  const registrarDesempenho = useDesempenhoStore((s) => s.registrar);
   const [questoesSessao, setQuestoesSessao] = useState<QuestaoSessao[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -161,6 +85,7 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
       return;
     }
 
+    registrarDesempenho(disciplina.id, questaoAtual.id, 'pular');
     setPuladas((valorAtual) => valorAtual + 1);
     setIndiceAtual((valorAtual) => valorAtual + 1);
   };
@@ -168,6 +93,15 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
   const handleProxima = () => {
     if (!questaoAtual) {
       return;
+    }
+
+    const letra = respostas[questaoAtual.sessionKey];
+    if (letra !== undefined) {
+      registrarDesempenho(
+        disciplina.id,
+        questaoAtual.id,
+        letra === questaoAtual.respostaCorreta ? 'acerto' : 'erro',
+      );
     }
 
     setIndiceAtual((valorAtual) => valorAtual + 1);

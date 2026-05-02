@@ -2,26 +2,37 @@ import type { Disciplina } from '../types';
 
 type DisciplinaCardProps = {
   disciplina: Disciplina;
+  pendentesSrs: number;
   onCadastrarQuestoes: (disciplinaId: string) => void;
   onEstudar: (disciplinaId: string) => void;
+  onEstudarInteligente: (disciplinaId: string) => void;
   onExportar: (disciplinaId: string) => void;
 };
 
 export function DisciplinaCard({
   disciplina,
+  pendentesSrs,
   onCadastrarQuestoes,
   onEstudar,
+  onEstudarInteligente,
   onExportar,
 }: DisciplinaCardProps) {
+  const desabilitadoEstudo = disciplina.questoes.length === 0;
+
   return (
     <article className="card disciplina-card">
       <div>
         <h3>{disciplina.nome}</h3>
         <p className="muted">
-          {disciplina.questoes.length} questão
-          {disciplina.questoes.length === 1 ? '' : 'ões'} cadastrada
-          {disciplina.questoes.length === 1 ? '' : 's'}
+          {disciplina.questoes.length === 1
+            ? '1 questão cadastrada'
+            : `${disciplina.questoes.length} questões cadastradas`}
         </p>
+        {!desabilitadoEstudo && pendentesSrs > 0 ? (
+          <p className="muted">
+            <strong>{pendentesSrs}</strong> pendente(s) de revisão (estudo inteligente)
+          </p>
+        ) : null}
       </div>
 
       <div className="actions-row">
@@ -41,9 +52,17 @@ export function DisciplinaCard({
         </button>
         <button
           type="button"
+          className="button button--secondary"
+          onClick={() => onEstudarInteligente(disciplina.id)}
+          disabled={desabilitadoEstudo}
+        >
+          Estudo inteligente
+        </button>
+        <button
+          type="button"
           className="button"
           onClick={() => onEstudar(disciplina.id)}
-          disabled={disciplina.questoes.length === 0}
+          disabled={desabilitadoEstudo}
         >
           Estudar
         </button>

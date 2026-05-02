@@ -17,12 +17,75 @@ export type Disciplina = {
   questoes: Questao[];
 };
 
-export type BackupDisciplinas = {
+export type BackupDisciplinasV1 = {
   format: 'estudo-questoes';
   version: 1;
   exportedAt: string;
   disciplinas: Disciplina[];
 };
+
+/** Progresso por questão no modo estudo inteligente (repetição espaçada). */
+export type SrsUltimaResposta = 'acerto' | 'erro' | 'pular';
+
+export type SrsQuestaoProgress = {
+  proximaRevisaoMs: number;
+  intervaloDias: number;
+  ease: number;
+  congelada: boolean;
+  visto: boolean;
+  ultimaResposta?: SrsUltimaResposta;
+  ultimaRespostaEm?: string;
+};
+
+export type SrsDisciplinaPrefs = {
+  diaCalendario: string;
+  novasFeitasHoje: number;
+  revisoesFeitasHoje: number;
+  metaDiaria?: number;
+  limiteNovas?: number;
+  limiteRevisoes?: number;
+  boostAteMs?: number;
+};
+
+export type SrsDisciplinaProgress = {
+  prefs: SrsDisciplinaPrefs;
+  questoes: Record<string, SrsQuestaoProgress>;
+};
+
+export type SrsProgressSnapshot = {
+  porDisciplina: Record<string, SrsDisciplinaProgress>;
+};
+
+/** Totais cumulativos por questão (estudo clássico + inteligente). */
+export type EstatQuestao = {
+  acertos: number;
+  erros: number;
+  puladas: number;
+};
+
+export type DesempenhoSnapshot = {
+  porDisciplina: Record<string, Record<string, EstatQuestao>>;
+};
+
+export type BackupDisciplinasV2 = {
+  format: 'estudo-questoes';
+  version: 2;
+  exportedAt: string;
+  disciplinas: Disciplina[];
+  progressoInteligente: SrsProgressSnapshot;
+  /** Opcional: histórico agregado de respostas por questão. */
+  estatisticasDesempenho?: DesempenhoSnapshot;
+};
+
+/** Resultado do parse de backup (v1 ou v2 unificado). */
+export type ParsedBackup = {
+  disciplinas: Disciplina[];
+  progressoInteligente: SrsProgressSnapshot | null;
+  estatisticasDesempenho: DesempenhoSnapshot | null;
+};
+
+/** Alias legado: importação aceita v1; exportação usa v2. */
+export type BackupDisciplinas = BackupDisciplinasV1;
 
 export type ResultadoImportacao = {
   adicionadas: number;

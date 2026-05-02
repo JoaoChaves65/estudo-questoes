@@ -3,7 +3,6 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 import type {
-  BackupDisciplinas,
   Disciplina,
   PossivelDuplicata,
   QuestaoGerenciada,
@@ -26,7 +25,7 @@ type DisciplinasStore = {
   adicionarDisciplina: (nome: string) => string | null;
   adicionarQuestoes: (disciplinaId: string, questoes: Questao[]) => void;
   buscarDisciplinaPorId: (disciplinaId: string) => Disciplina | undefined;
-  importarDisciplinas: (backup: BackupDisciplinas) => ResultadoImportacao;
+  importarDisciplinas: (payload: { disciplinas: Disciplina[] }) => ResultadoImportacao;
   obterDisciplinaPorId: (disciplinaId: string) => Disciplina | undefined;
   excluirQuestao: (disciplinaId: string, questaoId: string) => void;
   excluirQuestoesEmLote: (selecionadas: QuestaoSelecionada[]) => number;
@@ -149,9 +148,9 @@ export const useDisciplinasStore = create<DisciplinasStore>()(
               questoes,
             }));
         }),
-      importarDisciplinas: (backup) => {
+      importarDisciplinas: (payload) => {
         const disciplinasAtuais = get().disciplinas;
-        const disciplinasImportadas = backup.disciplinas;
+        const disciplinasImportadas = payload.disciplinas;
         const mapaAtual = new Map(
           disciplinasAtuais.map((disciplina) => [disciplina.id, disciplina]),
         );
