@@ -25,6 +25,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
   const [acertos, setAcertos] = useState(0);
   const [erros, setErros] = useState(0);
   const [puladas, setPuladas] = useState(0);
+  const [modoFoco, setModoFoco] = useState(false);
 
   useEffect(() => {
     const agoraMs = Date.now();
@@ -149,14 +150,41 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
     <Layout
       titulo={`Estudo inteligente: ${disciplina.nome}`}
       subtitulo="Fila por repetição espaçada: acertos espaçam revisão; erros e puladas voltam mais cedo. Pular conta como erro na fila."
+      compactHeader={
+        modoFoco ? (
+          <>
+            <button type="button" className="button button--secondary" onClick={onVoltar}>
+              Voltar
+            </button>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => setModoFoco(false)}
+            >
+              Sair do foco
+            </button>
+          </>
+        ) : undefined
+      }
       acoes={
-        <>
-          <button type="button" className="button button--secondary" onClick={onVoltar}>
-            Voltar
-          </button>
-        </>
+        modoFoco ? undefined : (
+          <>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => setModoFoco(true)}
+            >
+              Modo foco
+            </button>
+            <button type="button" className="button button--secondary" onClick={onVoltar}>
+              Voltar
+            </button>
+          </>
+        )
       }
     >
+      {!modoFoco ? (
+        <>
       <section className="card">
         <h2>Preferências do dia</h2>
         <p className="muted">
@@ -308,6 +336,8 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
           <strong>{puladas}</strong>
         </div>
       </section>
+        </>
+      ) : null}
 
       {filaIds.length === 0 && maisAlemLimites ? (
         <section className="card">
