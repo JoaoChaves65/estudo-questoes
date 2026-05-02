@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Layout } from '../components/Layout';
 import { QuestionStudyCard } from '../components/QuestionStudyCard';
+import { useDesempenhoStore } from '../store/useDesempenhoStore';
 import { totalEstudadoNoDia, useSrsProgressStore } from '../store/useSrsProgressStore';
 import type { Disciplina } from '../types';
 import { filaBloqueadaPorLimiteDiario, montarFilaOrdenada } from '../utils/srsScheduler';
@@ -16,6 +17,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
   const porDisciplina = useSrsProgressStore((s) => s.porDisciplina);
   const obterDisciplina = useSrsProgressStore((s) => s.obterDisciplina);
   const registrarResposta = useSrsProgressStore((s) => s.registrarResposta);
+  const registrarDesempenho = useDesempenhoStore((s) => s.registrar);
   const definirPreferencias = useSrsProgressStore((s) => s.definirPreferencias);
   const ativarBoost48h = useSrsProgressStore((s) => s.ativarBoost48h);
 
@@ -101,6 +103,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
       acertou ? 'acerto' : 'erro',
       Date.now(),
     );
+    registrarDesempenho(disciplina.id, questaoBruta.id, acertou ? 'acerto' : 'erro');
     if (acertou) {
       setAcertos((v) => v + 1);
     } else {
@@ -115,6 +118,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
       return;
     }
     registrarResposta(disciplina.id, id, 'pular', Date.now());
+    registrarDesempenho(disciplina.id, id, 'pular');
     setPuladas((v) => v + 1);
   };
 

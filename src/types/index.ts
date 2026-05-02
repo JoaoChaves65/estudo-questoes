@@ -56,18 +56,32 @@ export type SrsProgressSnapshot = {
   porDisciplina: Record<string, SrsDisciplinaProgress>;
 };
 
+/** Totais cumulativos por questão (estudo clássico + inteligente). */
+export type EstatQuestao = {
+  acertos: number;
+  erros: number;
+  puladas: number;
+};
+
+export type DesempenhoSnapshot = {
+  porDisciplina: Record<string, Record<string, EstatQuestao>>;
+};
+
 export type BackupDisciplinasV2 = {
   format: 'estudo-questoes';
   version: 2;
   exportedAt: string;
   disciplinas: Disciplina[];
   progressoInteligente: SrsProgressSnapshot;
+  /** Opcional: histórico agregado de respostas por questão. */
+  estatisticasDesempenho?: DesempenhoSnapshot;
 };
 
 /** Resultado do parse de backup (v1 ou v2 unificado). */
 export type ParsedBackup = {
   disciplinas: Disciplina[];
   progressoInteligente: SrsProgressSnapshot | null;
+  estatisticasDesempenho: DesempenhoSnapshot | null;
 };
 
 /** Alias legado: importação aceita v1; exportação usa v2. */

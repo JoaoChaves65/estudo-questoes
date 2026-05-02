@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Layout } from '../components/Layout';
 import { QuestionStudyCard } from '../components/QuestionStudyCard';
+import { useDesempenhoStore } from '../store/useDesempenhoStore';
 import type { Disciplina, Questao } from '../types';
 import { prepararQuestaoParaExibicao } from '../utils/studyQuestionDisplay';
 import { shuffleArray } from '../utils/shuffle';
@@ -23,6 +24,7 @@ function montarSessao(questoes: Questao[]): QuestaoSessao[] {
 }
 
 export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
+  const registrarDesempenho = useDesempenhoStore((s) => s.registrar);
   const [questoesSessao, setQuestoesSessao] = useState<QuestaoSessao[]>([]);
   const [indiceAtual, setIndiceAtual] = useState(0);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
@@ -83,6 +85,7 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
       return;
     }
 
+    registrarDesempenho(disciplina.id, questaoAtual.id, 'pular');
     setPuladas((valorAtual) => valorAtual + 1);
     setIndiceAtual((valorAtual) => valorAtual + 1);
   };
@@ -90,6 +93,15 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
   const handleProxima = () => {
     if (!questaoAtual) {
       return;
+    }
+
+    const letra = respostas[questaoAtual.sessionKey];
+    if (letra !== undefined) {
+      registrarDesempenho(
+        disciplina.id,
+        questaoAtual.id,
+        letra === questaoAtual.respostaCorreta ? 'acerto' : 'erro',
+      );
     }
 
     setIndiceAtual((valorAtual) => valorAtual + 1);

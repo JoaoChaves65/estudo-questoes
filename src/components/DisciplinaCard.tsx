@@ -24,9 +24,9 @@ export function DisciplinaCard({
       <div>
         <h3>{disciplina.nome}</h3>
         <p className="muted">
-          {disciplina.questoes.length} questão
-          {disciplina.questoes.length === 1 ? '' : 'ões'} cadastrada
-          {disciplina.questoes.length === 1 ? '' : 's'}
+          {disciplina.questoes.length === 1
+            ? '1 questão cadastrada'
+            : `${disciplina.questoes.length} questões cadastradas`}
         </p>
         {!desabilitadoEstudo && pendentesSrs > 0 ? (
           <p className="muted">

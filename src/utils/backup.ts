@@ -2,7 +2,9 @@ import type {
   Alternativa,
   BackupDisciplinasV1,
   BackupDisciplinasV2,
+  DesempenhoSnapshot,
   Disciplina,
+  EstatQuestao,
   ParsedBackup,
   Questao,
   SrsDisciplinaPrefs,
@@ -98,6 +100,32 @@ function validarProgressoInteligente(value: unknown): value is SrsProgressSnapsh
   return Object.values(value.porDisciplina).every(validarSrsDisciplinaProgress);
 }
 
+function validarEstatQuestao(value: unknown): value is EstatQuestao {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return (
+    typeof value.acertos === 'number' &&
+    typeof value.erros === 'number' &&
+    typeof value.puladas === 'number'
+  );
+}
+
+function validarEstatisticasDesempenho(value: unknown): value is DesempenhoSnapshot {
+  if (!isRecord(value) || !isRecord(value.porDisciplina)) {
+    return false;
+  }
+  for (const [, quests] of Object.entries(value.porDisciplina)) {
+    if (!isRecord(quests)) {
+      return false;
+    }
+    if (!Object.values(quests).every(validarEstatQuestao)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function sanitizarAlternativa(alternativa: Alternativa): Alternativa {
   return {
     letra: alternativa.letra.trim().toUpperCase(),
@@ -138,25 +166,51 @@ function sanitizarProgressoInteligente(snapshot: SrsProgressSnapshot): SrsProgre
   return { porDisciplina };
 }
 
+export function sanitizarDesempenho(snapshot: DesempenhoSnapshot): DesempenhoSnapshot {
+  const porDisciplina: DesempenhoSnapshot['porDisciplina'] = {};
+  for (const [disciplinaId, quests] of Object.entries(snapshot.porDisciplina)) {
+    const out: Record<string, EstatQuestao> = {};
+    for (const [qid, e] of Object.entries(quests)) {
+      out[qid.trim()] = {
+        acertos: Math.max(0, Math.floor(e.acertos)),
+        erros: Math.max(0, Math.floor(e.erros)),
+        puladas: Math.max(0, Math.floor(e.puladas)),
+      };
+    }
+    porDisciplina[disciplinaId.trim()] = out;
+  }
+  return { porDisciplina };
+}
+
 export function criarBackupDisciplinasV2(
   disciplinas: Disciplina[],
   progressoInteligente: SrsProgressSnapshot,
+  estatisticasDesempenho?: DesempenhoSnapshot | null,
 ): BackupDisciplinasV2 {
-  return {
+  const base: BackupDisciplinasV2 = {
     format: BACKUP_FORMAT,
     version: 2,
     exportedAt: new Date().toISOString(),
     disciplinas: disciplinas.map(sanitizarDisciplina),
     progressoInteligente: sanitizarProgressoInteligente(progressoInteligente),
   };
+  if (estatisticasDesempenho && Object.keys(estatisticasDesempenho.porDisciplina).length > 0) {
+    base.estatisticasDesempenho = sanitizarDesempenho(estatisticasDesempenho);
+  }
+  return base;
 }
 
 export function serializarBackupDisciplinas(
   disciplinas: Disciplina[],
   progressoInteligente?: SrsProgressSnapshot | null,
+  estatisticasDesempenho?: DesempenhoSnapshot | null,
 ): string {
   const progresso: SrsProgressSnapshot = progressoInteligente ?? { porDisciplina: {} };
-  return JSON.stringify(criarBackupDisciplinasV2(disciplinas, progresso), null, 2);
+  return JSON.stringify(
+    criarBackupDisciplinasV2(disciplinas, progresso, estatisticasDesempenho ?? undefined),
+    null,
+    2,
+  );
 }
 
 function validarBackupV1(payload: unknown): payload is BackupDisciplinasV1 {
@@ -171,15 +225,24 @@ function validarBackupV1(payload: unknown): payload is BackupDisciplinasV1 {
 }
 
 function validarBackupV2(payload: unknown): payload is BackupDisciplinasV2 {
-  return (
-    isRecord(payload) &&
-    payload.format === BACKUP_FORMAT &&
-    payload.version === 2 &&
-    typeof payload.exportedAt === 'string' &&
-    Array.isArray(payload.disciplinas) &&
-    payload.disciplinas.every(validarDisciplina) &&
-    validarProgressoInteligente(payload.progressoInteligente)
-  );
+  if (
+    !isRecord(payload) ||
+    payload.format !== BACKUP_FORMAT ||
+    payload.version !== 2 ||
+    typeof payload.exportedAt !== 'string' ||
+    !Array.isArray(payload.disciplinas) ||
+    !payload.disciplinas.every(validarDisciplina) ||
+    !validarProgressoInteligente(payload.progressoInteligente)
+  ) {
+    return false;
+  }
+  if (
+    payload.estatisticasDesempenho !== undefined &&
+    !validarEstatisticasDesempenho(payload.estatisticasDesempenho)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 export function parseBackupDisciplinas(texto: string): ParsedBackup {
@@ -195,6 +258,9 @@ export function parseBackupDisciplinas(texto: string): ParsedBackup {
     return {
       disciplinas: payload.disciplinas.map(sanitizarDisciplina),
       progressoInteligente: sanitizarProgressoInteligente(payload.progressoInteligente),
+      estatisticasDesempenho: payload.estatisticasDesempenho
+        ? sanitizarDesempenho(payload.estatisticasDesempenho)
+        : null,
     };
   }
 
@@ -202,6 +268,7 @@ export function parseBackupDisciplinas(texto: string): ParsedBackup {
     return {
       disciplinas: payload.disciplinas.map(sanitizarDisciplina),
       progressoInteligente: null,
+      estatisticasDesempenho: null,
     };
   }
 

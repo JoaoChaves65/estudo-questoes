@@ -1,7 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import { AppSelect, type AppSelectOption } from '../components/AppSelect';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Layout } from '../components/Layout';
 import type { Disciplina, PossivelDuplicata, QuestaoGerenciada } from '../types';
+
+type DialogoExclusao =
+  | null
+  | { tipo: 'questao'; disciplinaId: string; questaoId: string }
+  | { tipo: 'lote'; itens: { disciplinaId: string; questaoId: string }[] }
+  | { tipo: 'disciplina'; disciplinaId: string; nome: string };
 
 type ManageQuestionsPageProps = {
   disciplinas: Disciplina[];
@@ -36,6 +44,7 @@ export function ManageQuestionsPage({
   const [expandidas, setExpandidas] = useState<Record<string, boolean>>({});
   const [mensagem, setMensagem] = useState('');
   const [erro, setErro] = useState('');
+  const [dialogoExclusao, setDialogoExclusao] = useState<DialogoExclusao>(null);
 
   useEffect(() => {
     document.body.classList.add('body--manage');
@@ -58,7 +67,103 @@ export function ManageQuestionsPage({
     });
   }, [busca, filtroDisciplinaId, questoes]);
 
+  const opcoesFiltroDisciplina = useMemo<AppSelectOption[]>(
+    () => [
+      { value: 'todas', label: 'Todas as disciplinas' },
+      ...disciplinas.map((d) => ({ value: d.id, label: d.nome })),
+    ],
+    [disciplinas],
+  );
+
   const totalSelecionadas = Object.values(selecionadas).filter(Boolean).length;
+
+  const textoConfirmacao = useMemo(() => {
+    if (!dialogoExclusao) {
+      return null;
+    }
+    switch (dialogoExclusao.tipo) {
+      case 'questao':
+        return {
+          title: 'Excluir esta questão?',
+          description:
+            'Ela sai do cadastro e dos dados de estudo ligados a ela (incluindo SRS e desempenho). Não dá para desfazer.',
+          confirmLabel: 'Excluir questão',
+        };
+      case 'lote': {
+        const n = dialogoExclusao.itens.length;
+        return {
+          title: n === 1 ? 'Excluir 1 questão?' : `Excluir ${n} questões?`,
+          description:
+            n === 1
+              ? 'A questão será removida permanentemente. Esta ação não pode ser desfeita.'
+              : `As ${n} questões serão removidas permanentemente. Esta ação não pode ser desfeita.`,
+          confirmLabel: n === 1 ? 'Excluir questão' : `Excluir ${n} questões`,
+        };
+      }
+      case 'disciplina':
+        return {
+          title: `Excluir a disciplina “${dialogoExclusao.nome}”?`,
+          description:
+            'Todas as questões desta disciplina serão removidas do cadastro e dos dados de estudo. Não dá para desfazer.',
+          confirmLabel: 'Excluir disciplina inteira',
+        };
+      default:
+        return null;
+    }
+  }, [dialogoExclusao]);
+
+  const executarExclusaoConfirmada = () => {
+    const d = dialogoExclusao;
+    if (!d) {
+      return;
+    }
+    setDialogoExclusao(null);
+
+    switch (d.tipo) {
+      case 'questao':
+        onExcluirQuestao(d.disciplinaId, d.questaoId);
+        setMensagem('Questão excluída com sucesso.');
+        setErro('');
+        setSelecionadas((estadoAtual) => {
+          const proximoEstado = { ...estadoAtual };
+          delete proximoEstado[criarChaveQuestao(d.disciplinaId, d.questaoId)];
+          return proximoEstado;
+        });
+        break;
+
+      case 'lote': {
+        const removidas = onExcluirSelecionadas(d.itens);
+        setSelecionadas({});
+        setErro('');
+        setMensagem(
+          removidas === 1
+            ? '1 questão excluída com sucesso.'
+            : `${removidas} questões excluídas com sucesso.`,
+        );
+        break;
+      }
+
+      case 'disciplina':
+        onExcluirDisciplina(d.disciplinaId);
+        setSelecionadas((estadoAtual) => {
+          const proximoEstado = { ...estadoAtual };
+
+          for (const chave of Object.keys(proximoEstado)) {
+            if (chave.startsWith(`${d.disciplinaId}::`)) {
+              delete proximoEstado[chave];
+            }
+          }
+
+          return proximoEstado;
+        });
+        setErro('');
+        setMensagem(`Disciplina "${d.nome}" excluída com sucesso.`);
+        break;
+
+      default:
+        break;
+    }
+  };
 
   const toggleExpandir = (disciplinaId: string, questaoId: string) => {
     const chave = criarChaveQuestao(disciplinaId, questaoId);
@@ -78,26 +183,11 @@ export function ManageQuestionsPage({
     }));
   };
 
-  const handleExcluirQuestao = (disciplinaId: string, questaoId: string) => {
-    const confirmou = window.confirm(
-      'Deseja realmente excluir esta questao? Essa acao nao pode ser desfeita.',
-    );
-
-    if (!confirmou) {
-      return;
-    }
-
-    onExcluirQuestao(disciplinaId, questaoId);
-    setMensagem('Questao excluida com sucesso.');
-    setErro('');
-    setSelecionadas((estadoAtual) => {
-      const proximoEstado = { ...estadoAtual };
-      delete proximoEstado[criarChaveQuestao(disciplinaId, questaoId)];
-      return proximoEstado;
-    });
+  const solicitarExcluirQuestao = (disciplinaId: string, questaoId: string) => {
+    setDialogoExclusao({ tipo: 'questao', disciplinaId, questaoId });
   };
 
-  const handleExcluirSelecionadas = () => {
+  const solicitarExcluirSelecionadas = () => {
     const itensSelecionados = Object.entries(selecionadas)
       .filter(([, selecionada]) => selecionada)
       .map(([chave]) => {
@@ -106,48 +196,18 @@ export function ManageQuestionsPage({
       });
 
     if (itensSelecionados.length === 0) {
-      setErro('Selecione ao menos uma questao para excluir em lote.');
+      setErro('Selecione ao menos uma questão para excluir em lote.');
       setMensagem('');
       return;
     }
 
-    const confirmou = window.confirm(
-      `Deseja excluir ${itensSelecionados.length} questao(oes) selecionada(s)?`,
-    );
-
-    if (!confirmou) {
-      return;
-    }
-
-    const removidas = onExcluirSelecionadas(itensSelecionados);
-    setSelecionadas({});
     setErro('');
-    setMensagem(`${removidas} questao(oes) excluida(s) com sucesso.`);
+    setMensagem('');
+    setDialogoExclusao({ tipo: 'lote', itens: itensSelecionados });
   };
 
-  const handleExcluirDisciplina = (disciplinaId: string, nome: string) => {
-    const confirmou = window.confirm(
-      `Deseja excluir a disciplina "${nome}" inteira? Todas as questoes dela serao removidas.`,
-    );
-
-    if (!confirmou) {
-      return;
-    }
-
-    onExcluirDisciplina(disciplinaId);
-    setSelecionadas((estadoAtual) => {
-      const proximoEstado = { ...estadoAtual };
-
-      for (const chave of Object.keys(proximoEstado)) {
-        if (chave.startsWith(`${disciplinaId}::`)) {
-          delete proximoEstado[chave];
-        }
-      }
-
-      return proximoEstado;
-    });
-    setErro('');
-    setMensagem(`Disciplina "${nome}" excluida com sucesso.`);
+  const solicitarExcluirDisciplina = (disciplinaId: string, nome: string) => {
+    setDialogoExclusao({ tipo: 'disciplina', disciplinaId, nome });
   };
 
   return (
@@ -169,18 +229,13 @@ export function ManageQuestionsPage({
             onChange={(event) => setBusca(event.target.value)}
           />
 
-          <select
-            className="select-input"
+          <AppSelect
+            id="manage-filtro-disciplina"
             value={filtroDisciplinaId}
-            onChange={(event) => setFiltroDisciplinaId(event.target.value)}
-          >
-            <option value="todas">Todas as disciplinas</option>
-            {disciplinas.map((disciplina) => (
-              <option key={disciplina.id} value={disciplina.id}>
-                {disciplina.nome}
-              </option>
-            ))}
-          </select>
+            options={opcoesFiltroDisciplina}
+            onChange={(v) => setFiltroDisciplinaId(v)}
+            listaAriaLabel="Filtrar questões por disciplina"
+          />
         </div>
 
         <div className="actions-row">
@@ -188,7 +243,7 @@ export function ManageQuestionsPage({
           <button
             type="button"
             className="button"
-            onClick={handleExcluirSelecionadas}
+            onClick={solicitarExcluirSelecionadas}
             disabled={totalSelecionadas === 0}
           >
             Excluir selecionadas
@@ -215,7 +270,7 @@ export function ManageQuestionsPage({
               <button
                 type="button"
                 className="button button--danger"
-                onClick={() => handleExcluirDisciplina(disciplina.id, disciplina.nome)}
+                onClick={() => solicitarExcluirDisciplina(disciplina.id, disciplina.nome)}
               >
                 Excluir disciplina
               </button>
@@ -230,6 +285,14 @@ export function ManageQuestionsPage({
           <span className="tag">{totalSelecionadas} selecionada(s)</span>
         </div>
 
+        {srsCongelada && onToggleSrsCongelar ? (
+          <p className="muted manage-srs-hint">
+            <strong>Estudo inteligente (SRS):</strong> use <strong>Pausar na fila</strong> em questões que
+            você já domina — elas deixam de aparecer na fila com repetição espaçada. O estudo normal por
+            disciplina não é afetado. <strong>Recolocar na fila</strong> desfaz isso.
+          </p>
+        ) : null}
+
         {questoesFiltradas.length === 0 ? (
           <p className="muted">Nenhuma questao encontrada com os filtros atuais.</p>
         ) : (
@@ -240,16 +303,23 @@ export function ManageQuestionsPage({
 
               return (
                 <article key={chave} className="manage-question-item">
-                  <label className="manage-question-item__checkbox">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(selecionadas[chave])}
-                      onChange={() => toggleSelecao(disciplinaId, questao.id)}
-                    />
-                    <span>Selecionar</span>
-                  </label>
-
                   <div className="manage-question-item__content">
+                    <label className="manage-question-select">
+                      <input
+                        type="checkbox"
+                        className="manage-question-select__native visually-hidden"
+                        checked={Boolean(selecionadas[chave])}
+                        onChange={() => toggleSelecao(disciplinaId, questao.id)}
+                      />
+                      <span className="manage-question-select__box" aria-hidden />
+                      <span className="manage-question-select__text">
+                        <span className="manage-question-select__title">Marcar para exclusão em lote</span>
+                        <span className="manage-question-select__hint">
+                          Usa o botão &quot;Excluir selecionadas&quot; acima
+                        </span>
+                      </span>
+                    </label>
+
                     <div className="section-header">
                       <span className="tag tag--outline">{disciplinaNome}</span>
                       <div className="manage-question-item__meta">
@@ -300,17 +370,22 @@ export function ManageQuestionsPage({
                       <button
                         type="button"
                         className="button button--secondary"
+                        title={
+                          srsCongelada(disciplinaId, questao.id)
+                            ? 'Esta questão volta a poder entrar na fila do estudo inteligente (repetição espaçada).'
+                            : 'Esta questão some da fila do estudo inteligente até você recolocá-la. Não altera o estudo normal por disciplina.'
+                        }
                         onClick={() => onToggleSrsCongelar(disciplinaId, questao.id)}
                       >
                         {srsCongelada(disciplinaId, questao.id)
-                          ? 'Descongelar (SRS)'
-                          : 'Já sei de cor (SRS)'}
+                          ? 'Recolocar na fila do estudo inteligente'
+                          : 'Pausar na fila do estudo inteligente'}
                       </button>
                     ) : null}
                     <button
                       type="button"
                       className="button button--danger"
-                      onClick={() => handleExcluirQuestao(disciplinaId, questao.id)}
+                      onClick={() => solicitarExcluirQuestao(disciplinaId, questao.id)}
                     >
                       Excluir
                     </button>
@@ -355,6 +430,17 @@ export function ManageQuestionsPage({
           </div>
         )}
       </section>
+
+      <ConfirmDialog
+        open={dialogoExclusao !== null && textoConfirmacao !== null}
+        title={textoConfirmacao?.title ?? ''}
+        description={textoConfirmacao?.description ?? ''}
+        confirmLabel={textoConfirmacao?.confirmLabel ?? 'Confirmar'}
+        cancelLabel="Cancelar"
+        destructive
+        onCancel={() => setDialogoExclusao(null)}
+        onConfirm={executarExclusaoConfirmada}
+      />
     </Layout>
   );
 }
