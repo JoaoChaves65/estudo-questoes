@@ -1,5 +1,6 @@
-import type { ReactNode } from 'react';
+import { useEffect, useRef, type ReactNode } from 'react';
 import { Moon, Sun } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 
 import { useThemeStore } from '../store/useThemeStore';
 
@@ -20,6 +21,12 @@ export function Layout({
 }: LayoutProps) {
   const theme = useThemeStore((state) => state.theme);
   const toggleTheme = useThemeStore((state) => state.toggleTheme);
+  const { pathname } = useLocation();
+  const mainRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    mainRef.current?.focus({ preventScroll: true });
+  }, [pathname]);
 
   if (compactHeader) {
     return (
@@ -37,7 +44,9 @@ export function Layout({
           <div className="focus-topbar__actions">{compactHeader}</div>
         </div>
 
-        <main className="page-content">{children}</main>
+        <main ref={mainRef} id="conteudo-principal" className="page-content" tabIndex={-1}>
+          {children}
+        </main>
       </div>
     );
   }
@@ -64,7 +73,14 @@ export function Layout({
         </div>
       </header>
 
-      <main className="page-content">{children}</main>
+      <main
+        ref={mainRef}
+        id="conteudo-principal"
+        className="page-content"
+        tabIndex={-1}
+      >
+        {children}
+      </main>
     </div>
   );
 }

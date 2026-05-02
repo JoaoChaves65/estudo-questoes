@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 
 import { Layout } from '../components/Layout';
 import type { Disciplina } from '../types';
+import { contagemQuestoes, errosParsingContagem, questoesAdicionadasEmDisciplina } from '../utils/pluralPt';
 import { parseQuestoesComDiagnostico } from '../utils/parser';
 
 type ImportPageProps = {
@@ -30,9 +31,7 @@ export function ImportPage({
 
   const handleProcessar = () => {
     if (errosPreview.length > 0) {
-      setErro(
-        `Existem ${errosPreview.length} questao(oes) com problema no parsing. Corrija o texto antes de salvar.`,
-      );
+      setErro(errosParsingContagem(errosPreview.length));
       setMensagem('');
       return;
     }
@@ -48,10 +47,10 @@ export function ImportPage({
     setErro('');
     if (avisosPreview.length > 0) {
       setMensagem(
-        `${quantidade} questão(ões) adicionada(s) em ${disciplina.nome}, com ${avisosPreview.length} aviso(s) de parsing para revisão.`,
+        `${questoesAdicionadasEmDisciplina(quantidade, disciplina.nome)} (${avisosPreview.length} aviso(s) de parsing para revisão).`,
       );
     } else {
-      setMensagem(`${quantidade} questão(ões) adicionada(s) em ${disciplina.nome}.`);
+      setMensagem(questoesAdicionadasEmDisciplina(quantidade, disciplina.nome));
     }
     setTextoBruto('');
     setExpandidas({});
@@ -114,7 +113,9 @@ Justificativa: GABARITO: A FEEDBACK/COMENTÁRIO: Explique aqui por que a alterna
           >
             Processar questões
           </button>
-          <span className="muted">Prévia detectada: {previewQuestoes.length} questão(ões)</span>
+          <span className="muted">
+            Prévia detectada: {contagemQuestoes(previewQuestoes.length)}
+          </span>
         </div>
 
         {erro ? <p className="error-text">{erro}</p> : null}

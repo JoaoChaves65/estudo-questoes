@@ -152,8 +152,15 @@ button {
   margin: -1px;
   overflow: hidden;
   clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
   white-space: nowrap;
   border: 0;
+}
+
+.visually-hidden-file {
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  margin: 0;
 }
 
 #root {
@@ -210,10 +217,40 @@ button {
 .hero__actions {
   display: flex;
   gap: 12px;
-  align-items: center;
-  flex-wrap: nowrap;
+  align-items: flex-end;
+  flex-wrap: wrap;
   min-width: 0;
   flex-shrink: 0;
+}
+
+.hero__action-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 18px;
+  row-gap: 14px;
+  min-width: 0;
+}
+
+.hero__action-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.hero__action-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.hero__action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
 }
 
 .focus-topbar {
@@ -234,6 +271,7 @@ button {
 }
 
 .page-content {
+  position: relative;
   display: grid;
   gap: 20px;
   min-width: 0;
@@ -1061,7 +1099,28 @@ select.select-input {
   }
 
   .hero__actions {
-    flex-wrap: wrap;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+  }
+
+  .hero__actions .theme-toggle {
+    align-self: flex-end;
+  }
+
+  .hero__action-groups {
+    flex-direction: column;
+    width: 100%;
+  }
+
+  .hero__action-buttons {
+    width: 100%;
+  }
+
+  .hero__action-buttons .button {
+    flex: 1 1 auto;
+    min-width: min(140px, 100%);
+    justify-content: center;
   }
 
   .focus-topbar {

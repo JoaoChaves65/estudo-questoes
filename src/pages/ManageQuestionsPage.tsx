@@ -213,7 +213,7 @@ export function ManageQuestionsPage({
   return (
     <Layout
       titulo="Gerenciar questões"
-      subtitulo="Busque, revise duplicadas provaveis e apague questoes ou disciplinas com seguranca."
+      subtitulo="Busque, revise duplicadas prováveis e apague questões ou disciplinas com segurança."
       acoes={
         <button type="button" className="button button--secondary" onClick={onVoltar}>
           Voltar
@@ -239,7 +239,11 @@ export function ManageQuestionsPage({
         </div>
 
         <div className="actions-row">
-          <span className="tag">{questoesFiltradas.length} questoes visiveis</span>
+          <span className="tag">
+            {questoesFiltradas.length === 1
+              ? '1 questão visível'
+              : `${questoesFiltradas.length} questões visíveis`}
+          </span>
           <button
             type="button"
             className="button"
@@ -265,7 +269,11 @@ export function ManageQuestionsPage({
             <div key={disciplina.id} className="manage-disciplina-item">
               <div>
                 <strong>{disciplina.nome}</strong>
-                <p className="muted">{disciplina.questoes.length} questao(oes)</p>
+                <p className="muted">
+                  {disciplina.questoes.length === 1
+                    ? '1 questão cadastrada'
+                    : `${disciplina.questoes.length} questões cadastradas`}
+                </p>
               </div>
               <button
                 type="button"
@@ -294,7 +302,7 @@ export function ManageQuestionsPage({
         ) : null}
 
         {questoesFiltradas.length === 0 ? (
-          <p className="muted">Nenhuma questao encontrada com os filtros atuais.</p>
+          <p className="muted">Nenhuma questão encontrada com os filtros atuais.</p>
         ) : (
           <div className="manage-questions-list">
             {questoesFiltradas.map(({ disciplinaId, disciplinaNome, questao }) => {
@@ -404,7 +412,7 @@ export function ManageQuestionsPage({
         </div>
 
         {possiveisDuplicadas.length === 0 ? (
-          <p className="muted">Nenhuma duplicidade provavel encontrada no momento.</p>
+          <p className="muted">Nenhuma duplicidade provável encontrada no momento.</p>
         ) : (
           <div className="duplicate-list">
             {possiveisDuplicadas.map((grupo) => (
@@ -414,7 +422,11 @@ export function ManageQuestionsPage({
               >
                 <div className="section-header">
                   <span className="tag tag--outline">{grupo.disciplinaNome}</span>
-                  <span className="muted">{grupo.questoes.length} questoes parecidas</span>
+                  <span className="muted">
+                    {grupo.questoes.length === 1
+                      ? '1 questão parecida'
+                      : `${grupo.questoes.length} questões parecidas`}
+                  </span>
                 </div>
                 <p className="manage-question-item__title">{grupo.questoes[0]?.enunciado}</p>
                 <ul className="duplicate-item__list">

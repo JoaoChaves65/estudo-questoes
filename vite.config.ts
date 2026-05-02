@@ -1,6 +1,30 @@
-import { defineConfig } from 'vite';
+import { copyFileSync, existsSync } from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
 import react from '@vitejs/plugin-react';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+const configDir =
+  typeof import.meta.dirname !== 'undefined'
+    ? import.meta.dirname
+    : path.dirname(fileURLToPath(import.meta.url));
+
+/** GitHub Pages: servir SPA em URLs diretas antes do SW estar ativo. */
+function copyIndexAs404HtmlPlugin(): Plugin {
+  return {
+    name: 'copy-index-as-404-html',
+    apply: 'build',
+    closeBundle() {
+      const distDir = path.resolve(configDir, 'dist');
+      const indexPath = path.resolve(distDir, 'index.html');
+      if (existsSync(indexPath)) {
+        copyFileSync(indexPath, path.resolve(distDir, '404.html'));
+      }
+    },
+  };
+}
 
 // GitHub Pages publica em /<nome-do-repo>/; sem isso os assets vão para /assets e quebram (tela em branco).
 export default defineConfig(({ mode }) => {
@@ -10,6 +34,7 @@ export default defineConfig(({ mode }) => {
     base,
     plugins: [
       react(),
+      copyIndexAs404HtmlPlugin(),
       VitePWA({
         registerType: 'prompt',
         injectRegister: false,
