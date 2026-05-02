@@ -11,6 +11,8 @@ type ManageQuestionsPageProps = {
   onExcluirQuestao: (disciplinaId: string, questaoId: string) => void;
   onExcluirSelecionadas: (selecionadas: { disciplinaId: string; questaoId: string }[]) => number;
   onExcluirDisciplina: (disciplinaId: string) => void;
+  srsCongelada?: (disciplinaId: string, questaoId: string) => boolean;
+  onToggleSrsCongelar?: (disciplinaId: string, questaoId: string) => void;
 };
 
 function criarChaveQuestao(disciplinaId: string, questaoId: string) {
@@ -25,6 +27,8 @@ export function ManageQuestionsPage({
   onExcluirQuestao,
   onExcluirSelecionadas,
   onExcluirDisciplina,
+  srsCongelada,
+  onToggleSrsCongelar,
 }: ManageQuestionsPageProps) {
   const [filtroDisciplinaId, setFiltroDisciplinaId] = useState('todas');
   const [busca, setBusca] = useState('');
@@ -292,6 +296,17 @@ export function ManageQuestionsPage({
                   </div>
 
                   <div className="manage-question-item__actions">
+                    {srsCongelada && onToggleSrsCongelar ? (
+                      <button
+                        type="button"
+                        className="button button--secondary"
+                        onClick={() => onToggleSrsCongelar(disciplinaId, questao.id)}
+                      >
+                        {srsCongelada(disciplinaId, questao.id)
+                          ? 'Descongelar (SRS)'
+                          : 'Já sei de cor (SRS)'}
+                      </button>
+                    ) : null}
                     <button
                       type="button"
                       className="button button--danger"

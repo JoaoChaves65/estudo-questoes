@@ -4,6 +4,7 @@ type QuestionStudyCardProps = {
   questao: Questao;
   indiceAtual: number;
   total: number;
+  etiquetaContador?: string;
   respostaSelecionada: string | null;
   onResponder: (letra: string) => void;
 };
@@ -12,6 +13,7 @@ export function QuestionStudyCard({
   questao,
   indiceAtual,
   total,
+  etiquetaContador,
   respostaSelecionada,
   onResponder,
 }: QuestionStudyCardProps) {
@@ -19,7 +21,7 @@ export function QuestionStudyCard({
     <section className="card study-card">
       <div className="study-card__header">
         <span className="tag">
-          Questão {indiceAtual + 1} de {total}
+          {etiquetaContador ?? `Questão ${indiceAtual + 1} de ${total}`}
         </span>
         <span className="tag tag--outline">Alternativas embaralhadas</span>
       </div>
