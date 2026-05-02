@@ -5,6 +5,7 @@ import { QuestionStudyCard } from '../components/QuestionStudyCard';
 import { useDesempenhoStore } from '../store/useDesempenhoStore';
 import { totalEstudadoNoDia, useSrsProgressStore } from '../store/useSrsProgressStore';
 import type { Disciplina } from '../types';
+import { resumoAcertosErrosPuladas } from '../utils/pluralPt';
 import { filaBloqueadaPorLimiteDiario, montarFilaOrdenada } from '../utils/srsScheduler';
 import { prepararQuestaoParaExibicao } from '../utils/studyQuestionDisplay';
 
@@ -364,8 +365,8 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
         <section className="card final-card">
           <h2>Fila vazia</h2>
           <p>
-            Não há questões pendentes por agora (ou todas estão congeladas). Sessão: {acertos}{' '}
-            acerto(s), {erros} erro(s), {puladas} pulada(s).
+            Não há questões pendentes por agora (ou todas estão congeladas). Sessão:{' '}
+            {resumoAcertosErrosPuladas(acertos, erros, puladas)}
           </p>
           <div className="actions-row">
             <button type="button" className="button" onClick={handleNovaSessaoFila}>

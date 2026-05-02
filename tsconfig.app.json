@@ -6,6 +6,8 @@
     "module": "ESNext",
     "skipLibCheck": true,
     "moduleResolution": "Bundler",
+    "typeRoots": ["./node_modules/@types"],
+    "types": [],
     "allowImportingTsExtensions": false,
     "resolveJsonModule": true,
     "isolatedModules": true,

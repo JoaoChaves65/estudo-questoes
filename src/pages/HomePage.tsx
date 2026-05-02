@@ -84,35 +84,42 @@ export function HomePage({
       titulo="Monte seu ambiente de estudo"
       subtitulo="Crie disciplinas, cole o texto bruto da prova e deixe o parser estruturar tudo para estudar no navegador."
       acoes={
-        <>
-          <input
-            ref={inputArquivoRef}
-            type="file"
-            accept="application/json,.json"
-            className="visually-hidden"
-            onChange={handleSelecionarArquivo}
-          />
-          <button
-            type="button"
-            className="button button--secondary"
-            onClick={handleAbrirImportacao}
-          >
-            Importar JSON
-          </button>
-          <button
-            type="button"
-            className="button"
-            onClick={onExportarTudo}
-            disabled={disciplinas.length === 0}
-          >
-            Exportar tudo
-          </button>
-          <button type="button" className="button button--secondary" onClick={onAbrirDesempenho}>
-            Desempenho
-          </button>
-        </>
+        <div className="hero__action-groups">
+          <div className="hero__action-group">
+            <span className="hero__action-label muted">Backup</span>
+            <div className="hero__action-buttons">
+              <button type="button" className="button button--secondary" onClick={handleAbrirImportacao}>
+                Importar JSON
+              </button>
+              <button
+                type="button"
+                className="button"
+                onClick={onExportarTudo}
+                disabled={disciplinas.length === 0}
+              >
+                Exportar tudo
+              </button>
+            </div>
+          </div>
+          <div className="hero__action-group">
+            <span className="hero__action-label muted">Gestão</span>
+            <div className="hero__action-buttons">
+              <button type="button" className="button button--secondary" onClick={onAbrirDesempenho}>
+                Desempenho
+              </button>
+            </div>
+          </div>
+        </div>
       }
     >
+      <input
+        ref={inputArquivoRef}
+        type="file"
+        accept="application/json,.json"
+        className="visually-hidden visually-hidden-file"
+        aria-label="Escolher ficheiro JSON para importação"
+        onChange={handleSelecionarArquivo}
+      />
       <section className="card">
         <h2>Nova disciplina</h2>
         <form className="stack-form" onSubmit={handleSubmit}>

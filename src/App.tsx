@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+
+import {
+  Navigate,
+  Route,
+  Routes,
+  useNavigate,
+  useParams,
+} from 'react-router-dom';
 
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { DesempenhoPage } from './pages/DesempenhoPage';
@@ -11,22 +19,72 @@ import { useDesempenhoStore } from './store/useDesempenhoStore';
 import { useDisciplinasStore } from './store/useDisciplinasStore';
 import { useSrsProgressStore } from './store/useSrsProgressStore';
 import { useThemeStore } from './store/useThemeStore';
-import type { ResultadoImportacao } from './types';
+import type { Disciplina, ResultadoImportacao } from './types';
 import { criarNomeArquivoBackup, parseBackupDisciplinas, serializarBackupDisciplinas } from './utils/backup';
 import { baixarTextoComoArquivo } from './utils/download';
 import { parseQuestoesComDiagnostico } from './utils/parser';
 import { aplicarAtualizacaoSw, PWA_REFRESH_EVENT } from './pwaRegister';
 import { contarPendentes } from './utils/srsScheduler';
 
-type TelaAtiva =
-  | 'home'
-  | 'importar'
-  | 'estudar'
-  | 'estudarInteligente'
-  | 'gerenciar'
-  | 'desempenho';
+const THEME_COLOR_META = '#0f172a';
+const THEME_COLOR_LIGHT = '#eef6f3';
+
+function ImportDisciplinaRoute({
+  disciplinas,
+  onVoltar,
+  onSalvarQuestoes,
+}: {
+  disciplinas: Disciplina[];
+  onVoltar: () => void;
+  onSalvarQuestoes: (disciplinaId: string, texto: string) => number;
+}) {
+  const { disciplinaId } = useParams<{ disciplinaId: string }>();
+  const disciplina = disciplinas.find((d) => d.id === disciplinaId);
+  if (!disciplina) {
+    return <Navigate to="/" replace />;
+  }
+  return (
+    <ImportPage
+      disciplina={disciplina}
+      onVoltar={onVoltar}
+      onSalvarQuestoes={onSalvarQuestoes}
+    />
+  );
+}
+
+function EstudarDisciplinaRoute({
+  disciplinas,
+  onVoltar,
+}: {
+  disciplinas: Disciplina[];
+  onVoltar: () => void;
+}) {
+  const { disciplinaId } = useParams<{ disciplinaId: string }>();
+  const disciplina = disciplinas.find((d) => d.id === disciplinaId);
+  if (!disciplina) {
+    return <Navigate to="/" replace />;
+  }
+  return <StudyPage disciplina={disciplina} onVoltar={onVoltar} />;
+}
+
+function InteligenteDisciplinaRoute({
+  disciplinas,
+  onVoltar,
+}: {
+  disciplinas: Disciplina[];
+  onVoltar: () => void;
+}) {
+  const { disciplinaId } = useParams<{ disciplinaId: string }>();
+  const disciplina = disciplinas.find((d) => d.id === disciplinaId);
+  if (!disciplina) {
+    return <Navigate to="/" replace />;
+  }
+  return <SrsStudyPage disciplina={disciplina} onVoltar={onVoltar} />;
+}
 
 export default function App() {
+  const navigate = useNavigate();
+
   const disciplinas = useDisciplinasStore((state) => state.disciplinas);
   const adicionarDisciplina = useDisciplinasStore((state) => state.adicionarDisciplina);
   const adicionarQuestoes = useDisciplinasStore((state) => state.adicionarQuestoes);
@@ -58,17 +116,9 @@ export default function App() {
 
   const theme = useThemeStore((state) => state.theme);
 
-  const [telaAtiva, setTelaAtiva] = useState<TelaAtiva>('home');
-  const [disciplinaSelecionadaId, setDisciplinaSelecionadaId] = useState<string | null>(
-    null,
-  );
   const [pwaAtualizacaoPendente, setPwaAtualizacaoPendente] = useState(false);
 
-  const disciplinaSelecionada = useMemo(
-    () =>
-      disciplinas.find((disciplina) => disciplina.id === disciplinaSelecionadaId) ?? null,
-    [disciplinas, disciplinaSelecionadaId],
-  );
+  const aoHome = () => navigate('/');
 
   const pendentesSrsPorDisciplina = useMemo(() => {
     const agoraMs = Date.now();
@@ -86,6 +136,8 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
+    const bg = theme === 'dark' ? THEME_COLOR_META : THEME_COLOR_LIGHT;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg);
   }, [theme]);
 
   useEffect(() => {
@@ -97,14 +149,6 @@ export default function App() {
     window.addEventListener(PWA_REFRESH_EVENT, aoPedirRefresh);
     return () => window.removeEventListener(PWA_REFRESH_EVENT, aoPedirRefresh);
   }, []);
-
-  const abrirTela = (tela: TelaAtiva, disciplinaId?: string) => {
-    if (disciplinaId) {
-      setDisciplinaSelecionadaId(disciplinaId);
-    }
-
-    setTelaAtiva(tela);
-  };
 
   const handleSalvarQuestoes = (disciplinaId: string, texto: string) => {
     const resultado = parseQuestoesComDiagnostico(texto);
@@ -215,12 +259,11 @@ export default function App() {
     disciplinas,
     pendentesSrsPorDisciplina,
     onCriarDisciplina: adicionarDisciplina,
-    onAbrirCadastro: (disciplinaId: string) => abrirTela('importar', disciplinaId),
-    onAbrirEstudo: (disciplinaId: string) => abrirTela('estudar', disciplinaId),
-    onAbrirEstudoInteligente: (disciplinaId: string) =>
-      abrirTela('estudarInteligente', disciplinaId),
-    onAbrirGerenciamento: () => abrirTela('gerenciar'),
-    onAbrirDesempenho: () => abrirTela('desempenho'),
+    onAbrirCadastro: (disciplinaId: string) => navigate(`/importar/${disciplinaId}`),
+    onAbrirEstudo: (disciplinaId: string) => navigate(`/estudar/${disciplinaId}`),
+    onAbrirEstudoInteligente: (disciplinaId: string) => navigate(`/inteligente/${disciplinaId}`),
+    onAbrirGerenciamento: () => navigate('/gerenciar'),
+    onAbrirDesempenho: () => navigate('/desempenho'),
     onExportarTudo: handleExportarTudo,
     onExportarDisciplina: handleExportarDisciplina,
     onImportarArquivo: handleImportarArquivo,
@@ -231,65 +274,54 @@ export default function App() {
     setPwaAtualizacaoPendente(false);
   };
 
-  let telaPrincipal: ReactNode;
-
-  if (
-    telaAtiva !== 'home' &&
-    telaAtiva !== 'gerenciar' &&
-    telaAtiva !== 'desempenho' &&
-    !disciplinaSelecionada
-  ) {
-    telaPrincipal = <HomePage {...homeProps} />;
-  } else if (telaAtiva === 'desempenho') {
-    telaPrincipal = (
-      <DesempenhoPage
-        disciplinas={disciplinas}
-        onVoltar={() => setTelaAtiva('home')}
-      />
-    );
-  } else if (telaAtiva === 'importar' && disciplinaSelecionada) {
-    telaPrincipal = (
-      <ImportPage
-        disciplina={disciplinaSelecionada}
-        onVoltar={() => setTelaAtiva('home')}
-        onSalvarQuestoes={handleSalvarQuestoes}
-      />
-    );
-  } else if (telaAtiva === 'estudar' && disciplinaSelecionada) {
-    telaPrincipal = (
-      <StudyPage
-        disciplina={disciplinaSelecionada}
-        onVoltar={() => setTelaAtiva('home')}
-      />
-    );
-  } else if (telaAtiva === 'estudarInteligente' && disciplinaSelecionada) {
-    telaPrincipal = (
-      <SrsStudyPage
-        disciplina={disciplinaSelecionada}
-        onVoltar={() => setTelaAtiva('home')}
-      />
-    );
-  } else if (telaAtiva === 'gerenciar') {
-    telaPrincipal = (
-      <ManageQuestionsPage
-        disciplinas={disciplinas}
-        questoes={listarQuestoesGerenciadas()}
-        possiveisDuplicadas={detectarPossiveisDuplicadas()}
-        onVoltar={() => setTelaAtiva('home')}
-        onExcluirQuestao={handleExcluirQuestao}
-        onExcluirSelecionadas={handleExcluirSelecionadas}
-        onExcluirDisciplina={handleExcluirDisciplina}
-        srsCongelada={srsCongelada}
-        onToggleSrsCongelar={handleToggleCongelarSrs}
-      />
-    );
-  } else {
-    telaPrincipal = <HomePage {...homeProps} />;
-  }
-
   return (
     <>
-      {telaPrincipal}
+      <Routes>
+        <Route path="/" element={<HomePage {...homeProps} />} />
+
+        <Route
+          path="/gerenciar"
+          element={
+            <ManageQuestionsPage
+              disciplinas={disciplinas}
+              questoes={listarQuestoesGerenciadas()}
+              possiveisDuplicadas={detectarPossiveisDuplicadas()}
+              onVoltar={aoHome}
+              onExcluirQuestao={handleExcluirQuestao}
+              onExcluirSelecionadas={handleExcluirSelecionadas}
+              onExcluirDisciplina={handleExcluirDisciplina}
+              srsCongelada={srsCongelada}
+              onToggleSrsCongelar={handleToggleCongelarSrs}
+            />
+          }
+        />
+
+        <Route path="/desempenho" element={<DesempenhoPage disciplinas={disciplinas} onVoltar={aoHome} />} />
+
+        <Route
+          path="/importar/:disciplinaId"
+          element={
+            <ImportDisciplinaRoute
+              disciplinas={disciplinas}
+              onVoltar={aoHome}
+              onSalvarQuestoes={handleSalvarQuestoes}
+            />
+          }
+        />
+
+        <Route
+          path="/estudar/:disciplinaId"
+          element={<EstudarDisciplinaRoute disciplinas={disciplinas} onVoltar={aoHome} />}
+        />
+
+        <Route
+          path="/inteligente/:disciplinaId"
+          element={<InteligenteDisciplinaRoute disciplinas={disciplinas} onVoltar={aoHome} />}
+        />
+
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+
       <ConfirmDialog
         open={pwaAtualizacaoPendente}
         title="Nova versão disponível"

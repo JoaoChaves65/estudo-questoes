@@ -4,6 +4,7 @@ import { Layout } from '../components/Layout';
 import { QuestionStudyCard } from '../components/QuestionStudyCard';
 import { useDesempenhoStore } from '../store/useDesempenhoStore';
 import type { Disciplina, Questao } from '../types';
+import { resumoAcertosErrosPuladas, revisaoErrosDisponivel } from '../utils/pluralPt';
 import { prepararQuestaoParaExibicao } from '../utils/studyQuestionDisplay';
 import { shuffleArray } from '../utils/shuffle';
 
@@ -176,8 +177,7 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
         <section className="card final-card">
           <h2>Sessão concluída</h2>
           <p>
-            Você terminou a sessão com {acertos} acerto(s), {erros} erro(s) e {puladas} questão(ões)
-            pulada(s).
+            Você terminou a sessão com {resumoAcertosErrosPuladas(acertos, erros, puladas)}
           </p>
 
           <div className="actions-row">
@@ -202,9 +202,7 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
           {questoesErradasOriginais.length === 0 ? (
             <p className="success-text">Nenhum erro nesta sessão.</p>
           ) : (
-            <p className="muted">
-              Revisão disponível com {questoesErradasOriginais.length} questão(ões) respondida(s) incorretamente.
-            </p>
+            <p className="muted">{revisaoErrosDisponivel(questoesErradasOriginais.length)}</p>
           )}
         </section>
       ) : questaoAtual ? (

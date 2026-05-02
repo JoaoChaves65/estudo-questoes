@@ -1,93 +1,107 @@
-# Estudo de Questoes (React + TypeScript)
+# Estudo de questões (React + TypeScript)
 
-Aplicacao web para montar um ambiente de estudo de questoes de multipla escolha a partir de texto bruto de provas.  
-O foco do projeto e transformar blocos desorganizados em questoes estruturadas, estudar com feedback imediato e gerenciar o banco de questoes direto no navegador.
+Aplicação web para montar um ambiente de estudo de questões de múltipla escolha a partir do texto bruto de provas.  
+O objetivo é transformar blocos desorganizados em questões estruturadas, estudar com feedback imediato e gerenciar o banco de questões no próprio navegador.
 
-## Visao geral
+## Visão geral
 
-- Frontend puro com `React`, `TypeScript` e `Vite`
+- Frontend com `React`, `TypeScript` e `Vite`
 - Estado global com `Zustand`
-- Persistencia local com `localStorage` (sem backend)
-- Importacao/exportacao de backup em JSON
-- Parser com diagnostico de erros por questao
+- Persistência local em `localStorage` (sem backend)
+- Rotas partilháveis (`react-router-dom`) com `basename` alinhado ao `base` do Vite (`/estudo-questoes/` em produção no GitHub Pages)
+- Importação/exportação de backup JSON (formato **v2** com SRS e desempenho)
+- Parser com diagnóstico de erros por questão
 - Modo estudo com embaralhamento e modo foco
 
 ## Funcionalidades
 
 ### 1) Disciplinas
 
-- Criar disciplinas
-- Listar disciplinas cadastradas
-- Acessar a tela de importacao de questoes por disciplina
-- Iniciar estudo por disciplina
-- Exportar JSON de uma disciplina especifica
+- Criar disciplinas e listá-las
+- Abrir importação de questões por disciplina (rota `/importar/:disciplinaId`)
+- Estudo clássico e estudo inteligente (SRS) por disciplina
+- Exportar JSON de uma disciplina ou de tudo
 
-### 2) Importacao de questoes por texto bruto
+### 2) Importação por texto bruto
 
-- Campo de texto para colar o bloco completo da prova
-- Pre-visualizacao automatica das questoes detectadas
-- Expansao de cada item da previa para ver alternativas e explicacao
-- Bloqueio de salvamento quando houver erros de parsing
-- Diagnosticos especificos (ex.: ausencia de alternativa A, gabarito ausente, enunciado invalido)
-- Modelo de questao exibido quando a previa estiver vazia
+- Área para colar o bloco da prova; pré-visualização das questões detectadas
+- Expansão de cada item para ver alternativas e explicação
+- Salvamento bloqueado se houver erros de parsing
+- Diagnósticos específicos (alternativa ausente, gabarito, enunciado, etc.)
 
 ### 3) Modo estudo
 
-- Sessao com ordem de questoes embaralhada
-- Embaralhamento do texto das alternativas mantendo letras fixas (`A`, `B`, `C`...)
-- Feedback imediato ao responder
-- Contadores de acertos e erros
-- Finalizacao da sessao com resumo
-- Revisao apenas das questoes erradas
-- Modo foco com barra compacta (tema + voltar + sair do foco)
+- Ordem das questões embaralhada; alternativas embaralhadas com letras fixas
+- Feedback imediato e contadores
+- Finalização com resumo e revisão só das incorretas
+- Modo foco com cabeçalho compacto (tema, voltar, sair)
 
-### 4) Gerenciamento de questoes
+### 4) Estudo inteligente (SRS)
 
-- Busca por trecho do enunciado
-- Filtro por disciplina
-- Exclusao individual de questao com confirmacao
-- Selecao multipla e exclusao em lote
-- Exclusao de disciplina inteira com confirmacao
-- Exibicao de ID da questao
-- Expandir/recolher para ver alternativas e explicacao
-- Deteccao de possiveis duplicadas (sugestao; sem exclusao automatica)
+- Filas ordenadas por prazo de revisão e limites opcionais de novas/revisões por dia
+- Congelamento de cartões para pausar itens pontuais sem apagar dados
+- Contagem de pendências por disciplina na página inicial  
+  Dados SRS ficam na chave `estudo-questoes-srs` (ver [Persistência](#persistência)).
 
-### 5) Backup JSON
+### 5) Desempenho
 
-- Exportar todas as disciplinas em um arquivo
-- Exportar uma disciplina especifica
-- Importar backup JSON validando formato
-- Mesclar com dados existentes por `id` de disciplina:
-  - disciplina nova -> adicionada
-  - disciplina ja existente -> atualizada
+- Histórico de acertos/erros/pulos por questão para gráficos e leituras agregadas
+- Persistência na chave `estudo-questoes-desempenho`
 
-## Persistencia de dados
+### 6) Gerenciamento de questões
 
-Os dados ficam salvos no navegador do usuario:
+- Busca, filtros, exclusão individual e em lote, exclusão de disciplina
+- Detecção sugestiva de duplicidades (sem exclusão automática)
 
-- disciplinas e questoes: chave `estudo-questoes-storage`
-- preferencia de tema: chave `estudo-questoes-theme`
+### 7) Backup JSON
 
-Importante:
+- Exportar/importar arquivo validando formato
+- Versão **v1**: apenas disciplinas e questões
+- Versão **v2** (atual nos exports completos):
 
-- limpar dados do navegador remove os dados locais
-- trocar de navegador/dispositivo nao leva os dados automaticamente
-- para migrar dados, use exportacao/importacao JSON
+  | Campo | Conteúdo |
+  | --- | --- |
+  | `format` | sempre `estudo-questoes` |
+  | `version` | `2` |
+  | `disciplinas` | lista de disciplinas com questões |
+  | `progressoInteligente` | estado SRS (`porDisciplina`, preferências por dia, intervalos…) |
+  | `estatisticasDesempenho` _(opc.)_ | `porDisciplina` → por questão: `acertos`, `erros`, `puladas` |
 
-## Stack e bibliotecas
+Na importação, disciplinas são mescladas por `id`; SRS e desempenho opcionais no JSON são aplicados quando presentes.
 
-- `react`
-- `react-dom`
-- `typescript`
-- `vite`
-- `zustand`
-- `uuid`
-- `lucide-react`
+## Desempenho (UI)
+
+As listagens usam filtros normais no navegador. Se uma disciplina tiver um volume muito grande de questões e a interface ficar pesada, considere medir primeiro (DevTools Performance) antes de acrescentar virtualização.
+
+## PWA / offline / atualizações
+
+- O projeto usa `vite-plugin-pwa`: cache de assets e fallback de navegação para `index.html` quando há service worker ativo.
+- Deploy no GitHub Pages também inclui **`404.html` igual ao `index.html`** após o build, para refrescos em URLs profundas **antes** de o SW estar ativo.
+- Atualização de app: quando houver nova versão, pode aparecer o diálogo para recarregar e aplicar o bundle novo.
+
+## Persistência local
+
+Os dados ficam apenas no navegador. Chaves reais utilizadas pelo app:
+
+| Chave | Armazém |
+| --- | --- |
+| `estudo-questoes-storage` | Disciplinas e questões (`useDisciplinasStore`) |
+| `estudo-questoes-theme` | Tema claro/escuro |
+| `estudo-questoes-srs` | Progresso SRS |
+| `estudo-questoes-desempenho` | Estatísticas de estudo |
+
+Limpar dados do site remove tudo daí; usar exportação/importação JSON para migração.
+
+## Stack principal
+
+- `react`, `react-dom`, `react-router-dom`
+- `typescript`, `vite`, `vite-plugin-pwa`
+- `zustand`, `uuid`, `lucide-react`, `recharts`, `workbox-window`
 
 ## Requisitos
 
-- `Node.js` 18+ (recomendado)
-- `npm` (ou outro gerenciador compativel)
+- Node.js 18+ (recomendado 20+, como na CI/deploy)
+- `npm`
 
 ## Como rodar localmente
 
@@ -96,119 +110,71 @@ npm install
 npm run dev
 ```
 
-App em desenvolvimento: `http://localhost:5173`
+Em desenvolvimento: `http://localhost:5173` (basename `/`).
 
-## Scripts disponiveis
+## Scripts
 
-- `npm run dev`: inicia servidor de desenvolvimento com Vite
-- `npm run build`: executa typecheck e build de producao
-- `npm run preview`: serve build local para validacao
+- `npm run dev`: servidor Vite
+- `npm run build`: typecheck + build de produção (gera `dist/` + `404.html`)
+- `npm run preview`: validar build localmente
+- `npm run test`: Vitest (`--pool=threads`)
+- `npm run lint`: ESLint sobre `src/`
 
 ## Estrutura principal
 
 ```text
 src/
   components/
-    DisciplinaCard.tsx
-    Layout.tsx
-    QuestionStudyCard.tsx
   pages/
     HomePage.tsx
     ImportPage.tsx
     StudyPage.tsx
+    SrsStudyPage.tsx
     ManageQuestionsPage.tsx
+    DesempenhoPage.tsx
   store/
     useDisciplinasStore.ts
     useThemeStore.ts
+    useSrsProgressStore.ts
+    useDesempenhoStore.ts
   utils/
     parser.ts
     backup.ts
-    download.ts
-    shuffle.ts
+    srsScheduler.ts
+    pluralPt.ts
+    …
   types/
-    index.ts
   App.tsx
   main.tsx
 ```
 
 ## Formato esperado pelo parser
 
-Exemplo de bloco valido:
+Exemplo válido:
 
 ```text
-1) Enunciado completo da questao.
+1) Enunciado completo da questão.
 
 A) Texto da alternativa A.
-B) Texto da alternativa B.
-C) Texto da alternativa C.
-D) Texto da alternativa D.
-E) Texto da alternativa E.
-
-Justificativa: GABARITO: C FEEDBACK/COMENTARIO: Explicacao da resposta.
+…
+Justificativa: GABARITO: C FEEDBACK/COMENTARIO: Explicação da resposta.
 ```
 
-Observacoes:
+## Build e GitHub Pages
 
-- o parser normaliza trechos comuns de ruido (quebras de linha, blocos de nota/peso etc.)
-- a deteccao considera marcadores numerados (`1)`, `2)`...)
-- cada questao precisa de enunciado, alternativas validas e gabarito
-- quando algo falha, o sistema retorna erro especifico na previa
-
-## Tema (Dark/Light)
-
-- tema padrao: `dark`
-- alternancia por botao com icones de sol/lua
-- persistencia no navegador
-
-## Build de producao
+O `vite.config.ts` define `base: '/estudo-questoes/'` em produção. As rotas usam esse mesmo basename.
 
 ```bash
 npm run build
 ```
 
-Saida em `dist/`.
+Publicar o conteúdo de `dist/` (workflow em `.github/workflows/deploy-pages.yml`). No repositório, apontar o Pages para o artefacto gerado.
 
-## Deploy no GitHub Pages
+## Limitações atuais
 
-Sim, o projeto pode ser hospedado no GitHub Pages por ser frontend estatico.
-
-Passo a passo basico:
-
-1. Gerar build:
-
-```bash
-npm run build
-```
-
-2. Publicar o conteudo da pasta `dist/` em uma branch de publicacao (ex.: `gh-pages`) ou configurar workflow para isso.
-
-3. No repositorio do GitHub, habilitar Pages apontando para a branch/pasta publicada.
-
-Se o projeto for servido em subcaminho (ex.: `https://usuario.github.io/nome-repo/`), configure `base` no `vite.config.ts`:
-
-```ts
-import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-
-export default defineConfig({
-  plugins: [react()],
-  base: '/nome-repo/',
-});
-```
-
-## Limitacoes atuais
-
-- nao ha autenticacao nem sincronizacao em nuvem
-- deduplicacao e apenas sugestiva (nao remove automaticamente)
-- parser depende de estrutura minima de questao (numeracao, alternativas e gabarito)
-
-## Ideias de evolucao
-
-- filtros mais avancados no gerenciamento
-- tags por assunto e historico de desempenho por tema
-- importadores para outros formatos (CSV/PDF preprocessado)
-- sincronizacao opcional com backend
+- Sem login nem sincronização em nuvem
+- Sugestão de duplicidades é manual/automática só na revisão pelo utilizador
 
 ---
 
-Projeto criado para estudo rapido e organizado de questoes, com foco em praticidade e autonomia local.
+Projeto para estudo organizado com autonomia e dados locais.
