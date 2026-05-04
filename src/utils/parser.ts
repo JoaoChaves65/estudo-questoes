@@ -8,16 +8,25 @@ import type {
   ResultadoParseQuestoes,
 } from '../types';
 
-const REGEX_GABARITO = /GABARITO\s*:\s*([A-Z])/i;
+const REGEX_GABARITO = /GABARITO\s*:\s*([A-E])/i;
+const REGEX_RESPOSTA_LETRA = /Resposta\s*:\s*([A-E])\b/i;
+const REGEX_GABARITO_PALAVRA = /Gabarito\s*:?\s*([A-E])\b/i;
 const REGEX_FEEDBACK = /FEEDBACK\/COMENT[ÁA]RIO\s*:/i;
-const REGEX_QUESTAO_INICIO = /^\s*(\d+)\)\s+/gm;
+/** Início de linha: `1) ` ou `1)` sozinho (EAD cola número e enunciado em linhas diferentes). */
+const REGEX_QUESTAO_INICIO_LINHA = /^\s*(\d+)\)\s*/gm;
+/**
+ * Próxima questão colada ao fechamento de parêntese, ex.: `(Peso:0,500)2)Considere...`
+ * (comum em exportações SEI / EAD).
+ */
+const REGEX_QUESTAO_APOS_FECHA_PAREN = /(?<=\))(\d+)\)\s*/g;
 const REGEX_ALTERNATIVA_INICIO = /^\s*([A-E])\)\s*/gm;
 
 function normalizarTextoBase(texto: string): string {
   return texto
     .replace(/\r\n?/g, '\n')
     .replace(/\u00a0/g, ' ')
-    .replace(/\(Peso:[^)]+\)/gi, ' ')
+    /** Mantém um `)` para o marcador `(?<=\))(\d+)\)` ainda achar `)2)` após o peso. */
+    .replace(/\(Peso:[^)]+\)/gi, ')')
     .replace(/Nota:[^\n]+/gi, ' ')
     .replace(/Você foiAprovado[\s\S]*?Dados Consultados com Sucesso/gi, ' ')
     .replace(/\n{3,}/g, '\n\n')
@@ -37,9 +46,32 @@ function primeiroIndiceValido(...indices: number[]): number {
 }
 
 function detectarMarcadoresNumerados(texto: string): number[] {
-  return [...texto.matchAll(REGEX_QUESTAO_INICIO)]
-    .map((match) => match.index ?? -1)
-    .filter((indice) => indice >= 0);
+  const indices = new Set<number>();
+
+  for (const match of texto.matchAll(REGEX_QUESTAO_INICIO_LINHA)) {
+    const indice = match.index ?? -1;
+    if (indice >= 0) {
+      indices.add(indice);
+    }
+  }
+
+  for (const match of texto.matchAll(REGEX_QUESTAO_APOS_FECHA_PAREN)) {
+    const indice = match.index ?? -1;
+    if (indice >= 0) {
+      indices.add(indice);
+    }
+  }
+
+  return [...indices].sort((a, b) => a - b);
+}
+
+function extrairLetraGabarito(corpo: string): string {
+  return (
+    corpo.match(REGEX_GABARITO)?.[1] ??
+    corpo.match(REGEX_RESPOSTA_LETRA)?.[1] ??
+    corpo.match(REGEX_GABARITO_PALAVRA)?.[1] ??
+    ''
+  ).toUpperCase();
 }
 
 function extrairAlternativas(secao: string): Alternativa[] {
@@ -179,7 +211,7 @@ function extrairQuestao(
   const fimAlternativasSelecionado = inicioBuscaAlternativas + grupoEscolhido.fim;
   const enunciado = limparCampo(corpo.slice(0, inicioAlternativas));
   const alternativas = grupoEscolhido.alternativas;
-  const respostaCorreta = (corpo.match(REGEX_GABARITO)?.[1] ?? '').toUpperCase();
+  const respostaCorreta = extrairLetraGabarito(corpo);
 
   let explicacao = '';
   const matchFeedback = corpo.match(REGEX_FEEDBACK);

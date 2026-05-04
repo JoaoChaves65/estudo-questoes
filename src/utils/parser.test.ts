@@ -61,4 +61,100 @@ GABARITO: A`;
     expect(resultado.questoes[1]?.enunciado).not.toContain('questão 1');
     expect(resultado.questoes[1]?.alternativas[0]?.texto).toContain('Alternativa A2');
   });
+
+  it('aceita numero e enunciado na mesma linha (1) texto...)', () => {
+    const texto = `1) Enunciado tudo na primeira linha.
+
+Alternativas:
+A) Um.
+B) Dois.
+C) Três.
+D) Quatro.
+E) Cinco.
+GABARITO: B`;
+
+    const resultado = parseQuestoesComDiagnostico(texto);
+    expect(resultado.erros).toHaveLength(0);
+    expect(resultado.questoes).toHaveLength(1);
+    expect(resultado.questoes[0]?.enunciado).toContain('primeira linha');
+    expect(resultado.questoes[0]?.respostaCorreta).toBe('B');
+  });
+
+  it('detecta questao com numero em linha e enunciado na seguinte (EAD/SEI)', () => {
+    const texto = `1)
+A Lógica é o estudo do raciocínio correto.
+
+Marque a alternativa correta.
+
+A)
+Analogia.
+
+B)
+Contingência.
+
+C)
+Proposição.
+
+D)
+Conjunção.
+
+E)
+Argumento.
+
+Justificativa:Resposta: C Proposição: texto extra.(Peso:0,500)`;
+
+    const resultado = parseQuestoesComDiagnostico(texto);
+    expect(resultado.erros).toHaveLength(0);
+    expect(resultado.questoes).toHaveLength(1);
+    expect(resultado.questoes[0]?.respostaCorreta).toBe('C');
+    expect(resultado.questoes[0]?.enunciado).toContain('A Lógica');
+    expect(resultado.questoes[0]?.alternativas).toHaveLength(5);
+  });
+
+  it('separa questoes quando o proximo numero vem apos fechar parentese (Peso)2)', () => {
+    const texto = `1)
+Primeira questão enunciado.
+
+A)
+Um.
+
+B)
+Dois.
+
+C)
+Três.
+
+D)
+Quatro.
+
+E)
+Cinco.
+
+Justificativa:Gabarito A(Peso:0,500)2)
+Segunda questão.
+
+A)
+Alpha.
+
+B)
+Beta.
+
+C)
+Gamma.
+
+D)
+Delta.
+
+E)
+Epsilon.
+
+Justificativa:Gabarito c`;
+
+    const resultado = parseQuestoesComDiagnostico(texto);
+    expect(resultado.erros).toHaveLength(0);
+    expect(resultado.questoes).toHaveLength(2);
+    expect(resultado.questoes[0]?.respostaCorreta).toBe('A');
+    expect(resultado.questoes[1]?.respostaCorreta).toBe('C');
+    expect(resultado.questoes[1]?.enunciado).toContain('Segunda questão');
+  });
 });
