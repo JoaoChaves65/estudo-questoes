@@ -1,8 +1,8 @@
+# Deploy principal: Vercel. Executar manualmente se ainda quiser publicar em GitHub Pages.
 name: Deploy to GitHub Pages
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read

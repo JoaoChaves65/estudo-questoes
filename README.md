@@ -8,7 +8,7 @@ O objetivo é transformar blocos desorganizados em questões estruturadas, estud
 - Frontend com `React`, `TypeScript` e `Vite`
 - Estado global com `Zustand`
 - Persistência local em `localStorage` (sem backend)
-- Rotas partilháveis (`react-router-dom`) com `basename` alinhado ao `base` do Vite (`/estudo-questoes/` em produção no GitHub Pages)
+- Rotas partilháveis (`react-router-dom`) com `basename` alinhado ao `base` do Vite (`/` na Vercel; `/estudo-questoes/` num build de produção local/Pages sem `VERCEL`)
 - Importação/exportação de backup JSON (formato **v2** com SRS e desempenho)
 - Parser com diagnóstico de erros por questão
 - Modo estudo com embaralhamento e modo foco
@@ -160,15 +160,40 @@ A) Texto da alternativa A.
 Justificativa: GABARITO: C FEEDBACK/COMENTARIO: Explicação da resposta.
 ```
 
-## Build e GitHub Pages
+## Deploy na Vercel (recomendado)
 
-O `vite.config.ts` define `base: '/estudo-questoes/'` em produção. As rotas usam esse mesmo basename.
+1. Conta em [vercel.com](https://vercel.com), **Add New Project** → importar este repositório GitHub.
+2. Framework: **Vite** (detetado). Build: `npm run build`, output `dist` (padrão).
+3. Em **Settings → Environment Variables**, adicionar:
+   - `GEMINI_API_KEY` — chave da API Gemini (só no servidor; não usar prefixo `VITE_`).
+   - Opcional: `GEMINI_MODEL` (ex.: `gemini-2.0-flash`; existe default no código).
+
+Na Vercel o build define `VERCEL`, por isso o `vite.config.ts` usa **`base: '/'`** e as rotas funcionam na raiz do domínio.
+
+Rota serverless: **`POST /api/chat`** — corpo JSON `{ "prompt": "..." }` ou `{ "messages": [{ "role": "user", "content": "..." }] }`. Resposta `{ "text": "..." }`.
+
+Helper no cliente: `src/utils/geminiChat.ts` → `chatGemini(prompt)` (usa caminho relativo `/api/chat`).
+
+### Testar API no computador
 
 ```bash
-npm run build
+cp .env.example .env.local
+# Editar .env.local com GEMINI_API_KEY
+
+npx vercel dev
 ```
 
-Publicar o conteúdo de `dist/` (workflow em `.github/workflows/deploy-pages.yml`). No repositório, apontar o Pages para o artefacto gerado.
+Abre o URL indicado (front + `/api/chat` no mesmo host).
+
+### Build local como na Vercel
+
+```bash
+VERCEL=1 npm run build
+```
+
+### GitHub Pages (opcional)
+
+O workflow **Deploy to GitHub Pages** passou a ser só **`workflow_dispatch`** (manual). Um build de produção **sem** `VERCEL` continua com `base: '/estudo-questoes/'` para artefactos compatíveis com Pages.
 
 ## Limitações atuais
 

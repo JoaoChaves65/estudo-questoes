@@ -26,9 +26,14 @@ function copyIndexAs404HtmlPlugin(): Plugin {
   };
 }
 
-// GitHub Pages publica em /<nome-do-repo>/; sem isso os assets vão para /assets e quebram (tela em branco).
+// Produção na Vercel: `VERCEL` definido no build → base `/`. Build local/Pages: `/estudo-questoes/`.
 export default defineConfig(({ mode }) => {
-  const base = mode === 'production' ? '/estudo-questoes/' : '/';
+  const base =
+    Boolean(process.env.VERCEL) || process.env.VITE_USE_ROOT_BASE === '1'
+      ? '/'
+      : mode === 'production'
+        ? '/estudo-questoes/'
+        : '/';
 
   return {
     base,
