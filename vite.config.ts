@@ -27,8 +27,8 @@ function copyIndexAs404HtmlPlugin(): Plugin {
 }
 
 // Produção na Vercel: `VERCEL` definido no build → base `/`. Build local/Pages: `/estudo-questoes/`.
-// PWA só no `build`: com `vercel dev` o vite-plugin-pwa pode quebrar o pipeline do index.html (tela branca).
-export default defineConfig(({ mode, command }) => {
+// O plugin PWA tem de existir em dev (fornece `virtual:pwa-register`). SW pesado em dev fica desligado.
+export default defineConfig(({ mode }) => {
   const base =
     Boolean(process.env.VERCEL) || process.env.VITE_USE_ROOT_BASE === '1'
       ? '/'
@@ -36,54 +36,56 @@ export default defineConfig(({ mode, command }) => {
         ? '/estudo-questoes/'
         : '/';
 
-  const pwaPlugin =
-    command === 'build'
-      ? VitePWA({
-          registerType: 'prompt',
-          injectRegister: false,
-          includeAssets: ['pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
-          manifest: {
-            name: 'Estudo de Questões',
-            short_name: 'Estudo',
-            description:
-              'Monte disciplinas, importe questões e estude com feedback imediato, inclusive offline.',
-            lang: 'pt-BR',
-            theme_color: '#0f172a',
-            background_color: '#0f172a',
-            display: 'standalone',
-            orientation: 'portrait-primary',
-            icons: [
-              {
-                src: 'pwa-192.png',
-                sizes: '192x192',
-                type: 'image/png',
-                purpose: 'any',
-              },
-              {
-                src: 'pwa-512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                purpose: 'any',
-              },
-              {
-                src: 'pwa-512.png',
-                sizes: '512x512',
-                type: 'image/png',
-                purpose: 'maskable',
-              },
-            ],
-          },
-          workbox: {
-            globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-            navigateFallback: 'index.html',
-            navigateFallbackDenylist: [/^\/api\//],
-            cleanupOutdatedCaches: true,
-          },
-        })
-      : null;
-
   return {
     base,
-    plugins: [react(), copyIndexAs404HtmlPlugin(), ...(pwaPlugin ? [pwaPlugin] : [])],
+    plugins: [
+      react(),
+      copyIndexAs404HtmlPlugin(),
+      VitePWA({
+        registerType: 'prompt',
+        injectRegister: false,
+        devOptions: {
+          enabled: false,
+        },
+        includeAssets: ['pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
+        manifest: {
+          name: 'Estudo de Questões',
+          short_name: 'Estudo',
+          description:
+            'Monte disciplinas, importe questões e estude com feedback imediato, inclusive offline.',
+          lang: 'pt-BR',
+          theme_color: '#0f172a',
+          background_color: '#0f172a',
+          display: 'standalone',
+          orientation: 'portrait-primary',
+          icons: [
+            {
+              src: 'pwa-192.png',
+              sizes: '192x192',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: 'pwa-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'any',
+            },
+            {
+              src: 'pwa-512.png',
+              sizes: '512x512',
+              type: 'image/png',
+              purpose: 'maskable',
+            },
+          ],
+        },
+        workbox: {
+          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+          navigateFallback: 'index.html',
+          navigateFallbackDenylist: [/^\/api\//],
+          cleanupOutdatedCaches: true,
+        },
+      }),
+    ],
   };
 });
