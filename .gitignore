@@ -7,3 +7,4 @@ dist
 
 # CI usa npm + package-lock.json; lock do pnpm fica fora do git para o Dependabot não conflitar.
 pnpm-lock.yaml
+.vercel
