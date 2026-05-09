@@ -22,24 +22,22 @@ function copyIndexAs404HtmlPlugin() {
     };
 }
 // Produção na Vercel: `VERCEL` definido no build → base `/`. Build local/Pages: `/estudo-questoes/`.
-// O plugin PWA tem de existir em dev (fornece `virtual:pwa-register`). SW pesado em dev fica desligado.
-export default defineConfig(({ mode }) => {
+// `vite-plugin-pwa` em modo dev faz o `index.html` passar pelo `vite:import-analysis` e falha (parece JS inválido).
+// Em `serve`: não carregar PWA — só alias `virtual:pwa-register` → shim. Em `build`: PWA completo.
+export default defineConfig(({ mode, command }) => {
     const base = Boolean(process.env.VERCEL) || process.env.VITE_USE_ROOT_BASE === '1'
         ? '/'
         : mode === 'production'
             ? '/estudo-questoes/'
             : '/';
-    return {
-        base,
-        plugins: [
-            react(),
-            copyIndexAs404HtmlPlugin(),
+    const alias = command === 'serve'
+        ? { 'virtual:pwa-register': path.resolve(configDir, 'src/pwaRegisterDevShim.ts') }
+        : {};
+    const pwaPlugins = command === 'build'
+        ? [
             VitePWA({
                 registerType: 'prompt',
                 injectRegister: false,
-                devOptions: {
-                    enabled: false,
-                },
                 includeAssets: ['pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
                 manifest: {
                     name: 'Estudo de Questões',
@@ -78,6 +76,13 @@ export default defineConfig(({ mode }) => {
                     cleanupOutdatedCaches: true,
                 },
             }),
-        ],
+        ]
+        : [];
+    return {
+        base,
+        resolve: {
+            alias,
+        },
+        plugins: [react(), copyIndexAs404HtmlPlugin(), ...pwaPlugins],
     };
 });

@@ -27,8 +27,9 @@ function copyIndexAs404HtmlPlugin(): Plugin {
 }
 
 // Produção na Vercel: `VERCEL` definido no build → base `/`. Build local/Pages: `/estudo-questoes/`.
-// O plugin PWA tem de existir em dev (fornece `virtual:pwa-register`). SW pesado em dev fica desligado.
-export default defineConfig(({ mode }) => {
+// `vite-plugin-pwa` em modo dev faz o `index.html` passar pelo `vite:import-analysis` e falha (parece JS inválido).
+// Em `serve`: não carregar PWA — só alias `virtual:pwa-register` → shim. Em `build`: PWA completo.
+export default defineConfig(({ mode, command }) => {
   const base =
     Boolean(process.env.VERCEL) || process.env.VITE_USE_ROOT_BASE === '1'
       ? '/'
@@ -36,56 +37,64 @@ export default defineConfig(({ mode }) => {
         ? '/estudo-questoes/'
         : '/';
 
+  const alias: Record<string, string> =
+    command === 'serve'
+      ? { 'virtual:pwa-register': path.resolve(configDir, 'src/pwaRegisterDevShim.ts') }
+      : {};
+
+  const pwaPlugins =
+    command === 'build'
+      ? [
+          VitePWA({
+            registerType: 'prompt',
+            injectRegister: false,
+            includeAssets: ['pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
+            manifest: {
+              name: 'Estudo de Questões',
+              short_name: 'Estudo',
+              description:
+                'Monte disciplinas, importe questões e estude com feedback imediato, inclusive offline.',
+              lang: 'pt-BR',
+              theme_color: '#0f172a',
+              background_color: '#0f172a',
+              display: 'standalone',
+              orientation: 'portrait-primary',
+              icons: [
+                {
+                  src: 'pwa-192.png',
+                  sizes: '192x192',
+                  type: 'image/png',
+                  purpose: 'any',
+                },
+                {
+                  src: 'pwa-512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'any',
+                },
+                {
+                  src: 'pwa-512.png',
+                  sizes: '512x512',
+                  type: 'image/png',
+                  purpose: 'maskable',
+                },
+              ],
+            },
+            workbox: {
+              globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
+              navigateFallback: 'index.html',
+              navigateFallbackDenylist: [/^\/api\//],
+              cleanupOutdatedCaches: true,
+            },
+          }),
+        ]
+      : [];
+
   return {
     base,
-    plugins: [
-      react(),
-      copyIndexAs404HtmlPlugin(),
-      VitePWA({
-        registerType: 'prompt',
-        injectRegister: false,
-        devOptions: {
-          enabled: false,
-        },
-        includeAssets: ['pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
-        manifest: {
-          name: 'Estudo de Questões',
-          short_name: 'Estudo',
-          description:
-            'Monte disciplinas, importe questões e estude com feedback imediato, inclusive offline.',
-          lang: 'pt-BR',
-          theme_color: '#0f172a',
-          background_color: '#0f172a',
-          display: 'standalone',
-          orientation: 'portrait-primary',
-          icons: [
-            {
-              src: 'pwa-192.png',
-              sizes: '192x192',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: 'pwa-512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'any',
-            },
-            {
-              src: 'pwa-512.png',
-              sizes: '512x512',
-              type: 'image/png',
-              purpose: 'maskable',
-            },
-          ],
-        },
-        workbox: {
-          globPatterns: ['**/*.{js,css,html,ico,png,svg,webmanifest}'],
-          navigateFallback: 'index.html',
-          navigateFallbackDenylist: [/^\/api\//],
-          cleanupOutdatedCaches: true,
-        },
-      }),
-    ],
+    resolve: {
+      alias,
+    },
+    plugins: [react(), copyIndexAs404HtmlPlugin(), ...pwaPlugins],
   };
 });
