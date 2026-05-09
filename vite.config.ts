@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 import react from '@vitejs/plugin-react';
-import { defineConfig, type Plugin } from 'vite';
+import { defineConfig, loadEnv, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 const configDir =
@@ -30,6 +30,9 @@ function copyIndexAs404HtmlPlugin(): Plugin {
 // `vite-plugin-pwa` em modo dev faz o `index.html` passar pelo `vite:import-analysis` e falha (parece JS inválido).
 // Em `serve`: não carregar PWA — só alias `virtual:pwa-register` → shim. Em `build`: PWA completo.
 export default defineConfig(({ mode, command }) => {
+  const env = loadEnv(mode, configDir, '');
+  const devApiProxy = env.DEV_API_PROXY?.trim();
+
   const base =
     Boolean(process.env.VERCEL) || process.env.VITE_USE_ROOT_BASE === '1'
       ? '/'
@@ -90,11 +93,24 @@ export default defineConfig(({ mode, command }) => {
         ]
       : [];
 
+  const server =
+    command === 'serve' && devApiProxy
+      ? {
+          proxy: {
+            '/api': {
+              target: devApiProxy.replace(/\/$/, ''),
+              changeOrigin: true,
+            },
+          },
+        }
+      : undefined;
+
   return {
     base,
     resolve: {
       alias,
     },
+    ...(server ? { server } : {}),
     plugins: [react(), copyIndexAs404HtmlPlugin(), ...pwaPlugins],
   };
 });

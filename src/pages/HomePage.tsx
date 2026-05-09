@@ -13,6 +13,7 @@ type HomePageProps = {
   onAbrirEstudoInteligente: (disciplinaId: string) => void;
   onAbrirGerenciamento: () => void;
   onAbrirDesempenho: () => void;
+  onAbrirTesteIa: () => void;
   onExportarTudo: () => void;
   onExportarDisciplina: (disciplinaId: string) => void;
   onImportarArquivo: (arquivo: File) => Promise<ResultadoImportacao>;
@@ -27,6 +28,7 @@ export function HomePage({
   onAbrirEstudoInteligente,
   onAbrirGerenciamento,
   onAbrirDesempenho,
+  onAbrirTesteIa,
   onExportarTudo,
   onExportarDisciplina,
   onImportarArquivo,
@@ -106,6 +108,9 @@ export function HomePage({
             <div className="hero__action-buttons">
               <button type="button" className="button button--secondary" onClick={onAbrirDesempenho}>
                 Desempenho
+              </button>
+              <button type="button" className="button button--secondary" onClick={onAbrirTesteIa}>
+                Testar IA
               </button>
             </div>
           </div>

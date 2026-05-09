@@ -14,6 +14,7 @@ import { HomePage } from './pages/HomePage';
 import { ImportPage } from './pages/ImportPage';
 import { ManageQuestionsPage } from './pages/ManageQuestionsPage';
 import { SrsStudyPage } from './pages/SrsStudyPage';
+import { IaTestPage } from './pages/IaTestPage';
 import { StudyPage } from './pages/StudyPage';
 import { useDesempenhoStore } from './store/useDesempenhoStore';
 import { useDisciplinasStore } from './store/useDisciplinasStore';
@@ -264,6 +265,7 @@ export default function App() {
     onAbrirEstudoInteligente: (disciplinaId: string) => navigate(`/inteligente/${disciplinaId}`),
     onAbrirGerenciamento: () => navigate('/gerenciar'),
     onAbrirDesempenho: () => navigate('/desempenho'),
+    onAbrirTesteIa: () => navigate('/ia'),
     onExportarTudo: handleExportarTudo,
     onExportarDisciplina: handleExportarDisciplina,
     onImportarArquivo: handleImportarArquivo,
@@ -297,6 +299,8 @@ export default function App() {
         />
 
         <Route path="/desempenho" element={<DesempenhoPage disciplinas={disciplinas} onVoltar={aoHome} />} />
+
+        <Route path="/ia" element={<IaTestPage onVoltar={aoHome} />} />
 
         <Route
           path="/importar/:disciplinaId"
