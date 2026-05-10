@@ -9,7 +9,7 @@ export default tseslint.config(
     ignores: ['dist/**', '**/tsconfig*.tsbuildinfo'],
   },
   {
-    files: ['api/**/*.ts', 'src/**/*.{ts,tsx}', 'vite.config.ts'],
+    files: ['api/**/*.ts', 'shared/**/*.ts', 'src/**/*.{ts,tsx}', 'vite.config.ts'],
     languageOptions: {
       parserOptions: {
         ecmaFeatures: {

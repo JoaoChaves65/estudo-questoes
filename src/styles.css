@@ -425,6 +425,12 @@ select.select-input {
   border-color: transparent;
 }
 
+.app-select__trigger--disabled,
+.app-select__trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .app-select__trigger--aberto {
   border-color: transparent;
   box-shadow:
@@ -1235,6 +1241,40 @@ select.select-input {
   .desempenho-tap-detail {
     padding: 12px 14px;
   }
+}
+
+.ia-model-field {
+  position: relative;
+  z-index: 6;
+  max-width: min(520px, 100%);
+  margin-bottom: 1rem;
+}
+
+.ia-model-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 2px;
+}
+
+.ia-model-app-select {
+  width: 100%;
+}
+
+.ia-model-info-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  min-height: 40px;
+  padding: 0 10px;
+  flex-shrink: 0;
+}
+
+.ia-model-modal-destaque {
+  font-style: italic;
+  color: var(--text-secondary);
 }
 
 .confirm-dialog-overlay {

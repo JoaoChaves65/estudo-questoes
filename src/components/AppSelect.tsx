@@ -11,6 +11,7 @@ type AppSelectProps = {
   className?: string;
   /** Para leitores de tela quando a lista está aberta. */
   listaAriaLabel?: string;
+  disabled?: boolean;
 };
 
 export function AppSelect({
@@ -20,6 +21,7 @@ export function AppSelect({
   onChange,
   className = '',
   listaAriaLabel = 'Opções',
+  disabled = false,
 }: AppSelectProps) {
   const listId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
@@ -40,6 +42,12 @@ export function AppSelect({
     }
     setHilite(selectedIdx >= 0 ? selectedIdx : 0);
   }, [aberto, selectedIdx]);
+
+  useEffect(() => {
+    if (disabled) {
+      setAberto(false);
+    }
+  }, [disabled]);
 
   useEffect(() => {
     if (!aberto) {
@@ -101,6 +109,9 @@ export function AppSelect({
   }, [aberto, hilite, onChange, options]);
 
   const abrirOuAlternar = () => {
+    if (disabled) {
+      return;
+    }
     setAberto((v) => !v);
     if (!aberto) {
       requestAnimationFrame(() => triggerRef.current?.focus());
@@ -121,10 +132,11 @@ export function AppSelect({
         type="button"
         id={id}
         ref={triggerRef}
-        className={`app-select__trigger${aberto ? ' app-select__trigger--aberto' : ''}`}
+        className={`app-select__trigger${aberto ? ' app-select__trigger--aberto' : ''}${disabled ? ' app-select__trigger--disabled' : ''}`}
         aria-haspopup="listbox"
         aria-expanded={aberto}
         aria-controls={listId}
+        disabled={disabled}
         onClick={abrirOuAlternar}
       >
         <span className="app-select__valor">{displayLabel}</span>
