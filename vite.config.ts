@@ -29,6 +29,10 @@ function copyIndexAs404HtmlPlugin(): Plugin {
 // Produção na Vercel: `VERCEL` definido no build → base `/`. Build local/Pages: `/estudo-questoes/`.
 // `vite-plugin-pwa` em modo dev faz o `index.html` passar pelo `vite:import-analysis` e falha (parece JS inválido).
 // Em `serve`: não carregar PWA — só alias `virtual:pwa-register` → shim. Em `build`: PWA completo.
+//
+// Nota: não use rewrite catch-all SPA em `vercel.json` se você depende de `vercel dev`: o CLI aplica
+// essas rewrites ao servidor do Vite e quebra `/@vite/*`, `/src/*`, etc. Para fallback em rotas no deploy,
+// configure um Rewrite no projeto Vercel (UI) ou outro mecanismo que não interfira no dev server.
 export default defineConfig(({ mode, command }) => {
   const env = loadEnv(mode, configDir, '');
   const devApiProxy = env.DEV_API_PROXY?.trim();

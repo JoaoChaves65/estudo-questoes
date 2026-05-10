@@ -7,6 +7,8 @@ import App from './App';
 import './styles.css';
 import { inicializarRegistroSw } from './pwaRegister';
 
+document.title = 'Estudo de Questões';
+
 inicializarRegistroSw();
 
 function routerBasename(): string | undefined {
