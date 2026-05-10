@@ -166,7 +166,7 @@ Justificativa: GABARITO: C FEEDBACK/COMENTARIO: Explicação da resposta.
 2. Framework: **Vite** (detetado). Build: `npm run build`, output `dist` (padrão).
 3. Em **Settings → Environment Variables**, adicionar:
    - `GEMINI_API_KEY` — chave da API Gemini (só no servidor; não usar prefixo `VITE_`).
-   - Opcional: `GEMINI_MODEL` (ex.: `gemini-2.0-flash`; existe default no código).
+   - Opcional: `GEMINI_MODEL` (ex.: `gemini-2.5-flash` ou `gemma-4-26b-a4b-it`; existe default no código).
 
 Na Vercel o build define `VERCEL`, por isso o `vite.config.ts` usa **`base: '/'`** e as rotas funcionam na raiz do domínio.
 

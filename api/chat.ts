@@ -33,8 +33,29 @@ function resolveEnvFallbackModel(): GeminiChatAllowedModelId {
   return DEFAULT_MODEL;
 }
 
+function errorMessage(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** Modelo inexistente ou não exposto a generateContent nesta chave (ex.: 404 na REST). */
+function isModelUnavailableError(e: unknown): boolean {
+  const msg = errorMessage(e);
+  const lower = msg.toLowerCase();
+  if (/\b404\b/.test(msg)) {
+    return true;
+  }
+  return (
+    (lower.includes('not found') && lower.includes('models')) ||
+    lower.includes('is not supported for generatecontent') ||
+    lower.includes('call listmodels')
+  );
+}
+
 function isQuotaOrRateLimitError(e: unknown): boolean {
-  const msg = e instanceof Error ? e.message : String(e);
+  const msg = errorMessage(e);
+  if (isModelUnavailableError(e)) {
+    return false;
+  }
   const lower = msg.toLowerCase();
   return (
     lower.includes('429') ||
@@ -42,7 +63,7 @@ function isQuotaOrRateLimitError(e: unknown): boolean {
     lower.includes('rate limit') ||
     lower.includes('resource_exhausted') ||
     lower.includes('too many requests') ||
-    lower.includes('exhausted')
+    (lower.includes('exhausted') && !lower.includes('not found'))
   );
 }
 
@@ -123,11 +144,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     res.status(200).json({ text, model: modelId });
   } catch (e) {
-    const message = e instanceof Error ? e.message : 'Erro ao chamar o modelo.';
+    const message = errorMessage(e);
+    if (isModelUnavailableError(e)) {
+      res.status(400).json({
+        error:
+          'Este modelo não está disponível para a sua chave ou mudou de nome na Google. Escolha outro na lista ou confira em Google AI Studio quais modelos a sua API key pode usar.',
+        code: 'model_unavailable',
+      });
+      return;
+    }
     if (isQuotaOrRateLimitError(e)) {
       res.status(429).json({
         error:
-          'Limite de uso ou quota atingida (Google). Tenta outro modelo, aguarda alguns minutos ou verifica o painel AI Studio. Os limites são por projeto e janela rolante (~28 dias para várias métricas).',
+          'Limite de uso ou quota atingida para este modelo na Google. Tente outro modelo da lista (por exemplo Gemini 2.5 Flash ou Gemma 4), aguarde alguns minutos ou confira quotas no AI Studio.',
         code: 'quota_or_rate_limit',
       });
       return;

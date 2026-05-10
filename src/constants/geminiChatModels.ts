@@ -23,42 +23,50 @@ export const GEMINI_CHAT_MODELS: GeminiChatModelMeta[] = [
   {
     id: 'gemini-2.5-flash',
     label: 'Gemini 2.5 Flash',
-    dropdownLabel: 'Gemini 2.5 Flash — ideal para o dia a dia de estudo',
-    destaque: 'Rápido, equilibrado e confiável',
+    dropdownLabel: 'Gemini 2.5 Flash — bom para a maioria das perguntas',
+    destaque: 'Equilíbrio entre velocidade e qualidade',
     texto:
-      'Ótimo para esclarecer dúvidas, resumir matéria e conversar com você enquanto estuda. É a escolha natural quando você quer uma boa resposta sem complicar — e costuma aguentar bem várias perguntas ao longo do dia.',
+      'Use no dia a dia: tirar dúvidas, pedir resumos e conversar sobre a matéria. É a opção que costuma funcionar bem para quem está estudando — nem muito “pesada”, nem superficial demais.',
   },
   {
     id: 'gemini-2.5-flash-lite',
     label: 'Gemini 2.5 Flash Lite',
-    dropdownLabel: 'Gemini 2.5 Flash Lite — para muitas perguntas em sequência',
-    destaque: 'Ágil e feito para uso frequente',
+    dropdownLabel: 'Gemini 2.5 Flash Lite — para perguntar muitas vezes seguidas',
+    destaque: 'Mais leve: ideal para revisão rápida',
     texto:
-      'Para quando você vai tirando dúvida atrás de dúvida — revisões rápidas, perguntas curtas, aquele ritmo de estudo mais puxado. As respostas vêm mais diretas; em tema bem pesado ou texto bem longo, outro modelo pode te dar mais profundidade.',
+      'Quando você faz várias perguntas curtas, uma atrás da outra — tipo revisão antes da prova. As respostas vêm um pouco mais diretas; para textos enormes ou assuntos bem difíceis, o modelo “completo” acima pode ajudar mais.',
   },
   {
-    id: 'gemini-2.0-flash',
-    label: 'Gemini 2.0 Flash',
-    dropdownLabel: 'Gemini 2.0 Flash — geração anterior, ainda muito sólida',
-    destaque: 'Estável e familiar',
-    texto:
-      'Continua excelente para estudo no geral. Serve para comparar com os modelos mais novos ou quando essa é a versão que você já se acostumou a usar.',
-  },
-  {
-    id: 'gemini-3-flash',
+    id: 'gemini-3-flash-preview',
     label: 'Gemini 3 Flash',
-    dropdownLabel: 'Gemini 3 Flash — geração mais recente',
-    destaque: 'Um passo à frente em nuance e clareza',
+    dropdownLabel: 'Gemini 3 Flash — modelo mais novo da Google',
+    destaque: 'Atualizado em relação ao 2.5',
     texto:
-      'Para quando você quer explicações com um pouco mais de matiz e capricho, sem abrir mão da velocidade. Um bom salto em relação ao 2.5 se na sua conta esse modelo já estiver disponível.',
+      'Para quem quer experimentar a versão mais recente da linha Flash. Em geral entende bem contexto e explica com clareza. Se um dia aparecer erro de limite de uso, volte ao 2.5 Flash ou experimente outra opção da lista.',
   },
   {
-    id: 'gemini-2.5-pro',
-    label: 'Gemini 2.5 Pro',
-    dropdownLabel: 'Gemini 2.5 Pro — quando o assunto pede o máximo',
-    destaque: 'O mais caprichado para raciocínio exigente',
+    id: 'gemini-3.1-flash-lite',
+    label: 'Gemini 3.1 Flash Lite',
+    dropdownLabel: 'Gemini 3.1 Flash Lite — leve e econômico',
+    destaque: 'Menos “pesado” que o Flash completo',
     texto:
-      'Para quando o tema aperta: análises mais longas, problemas difíceis ou texto que precisa de muito rigor. Use com critério — cada conversa “pesa” um pouco mais no seu limite do que os modelos mais rápidos, mas entrega o melhor que a família Gemini tem para texto.',
+      'Bom para muitas perguntas pequenas ou quando você quer algo mais simples e rápido. Pensa na linha 3.1, só que numa versão mais enxuta — ótima para uso em série durante o estudo.',
+  },
+  {
+    id: 'gemma-4-26b-a4b-it',
+    label: 'Gemma 4 (26B)',
+    dropdownLabel: 'Gemma 4 — 26B (outro assistente da Google)',
+    destaque: 'Às vezes funciona quando o Gemini “trava”',
+    texto:
+      'A Gemma é outra família de modelo da Google — parecida com um assistente de texto. Às vezes o limite de uso é contado separado do Gemini: se uma opção não responder por causa de limite, vale tentar esta e depois a Gemma 31B abaixo.',
+  },
+  {
+    id: 'gemma-4-31b-it',
+    label: 'Gemma 4 (31B)',
+    dropdownLabel: 'Gemma 4 — 31B (respostas mais elaboradas)',
+    destaque: 'Mais “capacidade” que a Gemma 26B',
+    texto:
+      'Mesma linha da Gemma 26B acima, só que costuma ir melhor em perguntas mais longas ou quando você quer uma explicação mais detalhada. Se a resposta vier grande demais, peça para resumir ou troque para uma opção mais leve.',
   },
 ];
 
