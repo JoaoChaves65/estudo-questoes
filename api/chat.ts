@@ -62,7 +62,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     textIn = textIn.slice(0, MAX_INPUT_CHARS);
   }
 
-  const modelId = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  const modelId = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
 
   try {
     const genAI = new GoogleGenerativeAI(apiKey);
