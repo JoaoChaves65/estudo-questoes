@@ -10,10 +10,15 @@ import {
   type GeminiChatAllowedModelId,
 } from '../constants/geminiChatModels';
 import { Layout } from '../components/Layout';
-import { chatGemini, type ChatGeminiAnswerMode } from '../utils/geminiChat';
+import {
+  chatGemini,
+  type ChatGeminiAnswerMode,
+  type ChatGeminiMessage,
+} from '../utils/geminiChat';
 
 const STORAGE_KEY = 'estudo-questoes:gemini-chat-model-id';
 const ANSWER_MODE_STORAGE_KEY = 'estudo-questoes:gemini-chat-answer-mode';
+const RECENT_CONTEXT_MESSAGE_LIMIT = 8;
 
 const ANSWER_MODE_OPTIONS: AppSelectOption[] = [
   { value: 'curta', label: 'Resposta curta — economiza mais tokens' },
@@ -47,10 +52,18 @@ type IaTestPageProps = {
   onVoltar: () => void;
 };
 
+type IaChatMessage = ChatGeminiMessage & {
+  id: string;
+  model?: string;
+};
+
+function createMessageId(): string {
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
 export function IaTestPage({ onVoltar }: IaTestPageProps) {
   const [prompt, setPrompt] = useState('');
-  const [resposta, setResposta] = useState('');
-  const [modeloUsado, setModeloUsado] = useState<string | null>(null);
+  const [messages, setMessages] = useState<IaChatMessage[]>([]);
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
   const [modeloId, setModeloId] = useState<GeminiChatAllowedModelId>(() => readStoredModelId());
@@ -87,19 +100,46 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
       return;
     }
     setErro('');
-    setResposta('');
-    setModeloUsado(null);
     setCarregando(true);
+    setPrompt('');
+
+    const userMessage: IaChatMessage = {
+      id: createMessageId(),
+      role: 'user',
+      content: texto,
+    };
+    const nextMessages = [...messages, userMessage];
+    const contextMessages = nextMessages
+      .slice(-RECENT_CONTEXT_MESSAGE_LIMIT)
+      .map(({ role, content }) => ({ role, content }));
+    setMessages(nextMessages);
+
     try {
-      const { text, model } = await chatGemini(texto, { model: modeloId, answerMode });
-      setResposta(text);
-      setModeloUsado(model ?? modeloId);
+      const { text, model } = await chatGemini(texto, {
+        messages: contextMessages,
+        model: modeloId,
+        answerMode,
+      });
+      setMessages((current) => [
+        ...current,
+        {
+          id: createMessageId(),
+          role: 'model',
+          content: text,
+          model: model ?? modeloId,
+        },
+      ]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido.';
       setErro(msg);
     } finally {
       setCarregando(false);
     }
+  };
+
+  const handleClearChat = () => {
+    setMessages([]);
+    setErro('');
   };
 
   return (
@@ -173,17 +213,50 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
             {carregando ? 'A enviar…' : 'Enviar'}
           </button>
         </form>
+
+        <div className="ia-chat-context-note">
+          <p>
+            A IA usa só as últimas {RECENT_CONTEXT_MESSAGE_LIMIT} mensagens como contexto para
+            economizar tokens.
+          </p>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={handleClearChat}
+            disabled={carregando || messages.length === 0}
+            title="Apaga o histórico usado como contexto. Ajuda a economizar tokens quando mudar de assunto."
+          >
+            Limpar conversa
+          </button>
+        </div>
       </section>
 
-      {resposta ? (
-        <section className="card">
-          <h2>Resposta</h2>
-          {modeloUsado ? (
-            <p className="muted" style={{ marginBottom: '0.75rem', fontSize: '0.88rem' }}>
-              Modelo no servidor: <code>{modeloUsado}</code>
+      {messages.length ? (
+        <section className="card ia-chat-history">
+          <div className="ia-chat-history__header">
+            <h2>Conversa</h2>
+            <p className="muted">
+              Limpar conversa apaga o contexto atual; a próxima pergunta começa do zero.
             </p>
-          ) : null}
-          <pre className="ia-teste-resposta">{resposta}</pre>
+          </div>
+          <div className="ia-chat-messages">
+            {messages.map((message) => (
+              <article
+                key={message.id}
+                className={`ia-chat-message ia-chat-message--${message.role}`}
+              >
+                <div className="ia-chat-message__meta">
+                  <strong>{message.role === 'user' ? 'Você' : 'IA'}</strong>
+                  {message.model ? (
+                    <span>
+                      Modelo: <code>{message.model}</code>
+                    </span>
+                  ) : null}
+                </div>
+                <pre className="ia-chat-message__content">{message.content}</pre>
+              </article>
+            ))}
+          </div>
         </section>
       ) : null}
 

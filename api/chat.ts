@@ -9,6 +9,8 @@ import {
 } from '../shared/geminiAllowedModels.js';
 
 const MAX_INPUT_CHARS = 12_000;
+const MAX_CONTEXT_MESSAGES = 8;
+const MAX_MESSAGE_CHARS = 3_000;
 
 const DEFAULT_MODEL: GeminiChatAllowedModelId = 'gemini-2.5-flash';
 const DEFAULT_ANSWER_MODE = 'curta';
@@ -16,6 +18,10 @@ const BASE_SYSTEM_INSTRUCTION =
   'PT-BR apenas. Sem tradução. Responda só o texto final. Sem raciocínio, etapas, checklist ou notas técnicas. Seja direto. Sem base? diga que não dá para concluir.';
 
 type AnswerMode = 'curta' | 'normal' | 'detalhada';
+type ChatMessage = {
+  role: 'user' | 'model';
+  content: string;
+};
 
 const ANSWER_MODE_CONFIG: Record<AnswerMode, { maxOutputTokens: number; instruction: string }> = {
   curta: {
@@ -106,6 +112,47 @@ function normalizeInputText(text: string): string {
     .join('\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+}
+
+function normalizeMessageRole(role: string): ChatMessage['role'] | undefined {
+  if (role === 'user') {
+    return 'user';
+  }
+  if (role === 'model' || role === 'assistant') {
+    return 'model';
+  }
+  return undefined;
+}
+
+function sanitizeChatMessages(value: unknown): ChatMessage[] {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  const messages: ChatMessage[] = [];
+  for (const item of value.slice(-MAX_CONTEXT_MESSAGES)) {
+    if (
+      !item ||
+      typeof item !== 'object' ||
+      !('role' in item) ||
+      !('content' in item) ||
+      typeof (item as { role: unknown }).role !== 'string' ||
+      typeof (item as { content: unknown }).content !== 'string'
+    ) {
+      continue;
+    }
+
+    const role = normalizeMessageRole((item as { role: string }).role);
+    const content = normalizeInputText((item as { content: string }).content).slice(0, MAX_MESSAGE_CHARS);
+    if (role && content) {
+      messages.push({ role, content });
+    }
+  }
+  return messages;
+}
+
+function formatChatMessages(messages: ChatMessage[]): string {
+  return messages.map((message) => `${message.role}: ${message.content}`).join('\n');
 }
 
 function resolveEnvFallbackModel(): GeminiChatAllowedModelId {
@@ -264,21 +311,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (typeof body?.prompt === 'string' && body.prompt.trim()) {
     textIn = body.prompt;
   } else if (Array.isArray(body?.messages)) {
-    const parts: string[] = [];
-    for (const m of body.messages) {
-      if (
-        m &&
-        typeof m === 'object' &&
-        'role' in m &&
-        'content' in m &&
-        typeof (m as { role: unknown }).role === 'string' &&
-        typeof (m as { content: unknown }).content === 'string'
-      ) {
-        const msg = m as { role: string; content: string };
-        parts.push(`${msg.role}: ${msg.content}`);
-      }
-    }
-    textIn = parts.join('\n');
+    textIn = formatChatMessages(sanitizeChatMessages(body.messages));
   }
 
   textIn = normalizeInputText(textIn);

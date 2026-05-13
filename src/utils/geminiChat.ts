@@ -3,10 +3,15 @@
  */
 
 export type ChatGeminiAnswerMode = 'curta' | 'normal' | 'detalhada';
+export type ChatGeminiMessage = {
+  role: 'user' | 'model';
+  content: string;
+};
 
 export type ChatGeminiOptions = {
   model?: string;
   answerMode?: ChatGeminiAnswerMode;
+  messages?: ChatGeminiMessage[];
 };
 
 export type ChatGeminiResult = {
@@ -17,7 +22,17 @@ export type ChatGeminiResult = {
 };
 
 export async function chatGemini(prompt: string, options?: ChatGeminiOptions): Promise<ChatGeminiResult> {
-  const body: { prompt: string; model?: string; answerMode?: ChatGeminiAnswerMode } = { prompt };
+  const body: {
+    prompt?: string;
+    messages?: ChatGeminiMessage[];
+    model?: string;
+    answerMode?: ChatGeminiAnswerMode;
+  } = {};
+  if (options?.messages?.length) {
+    body.messages = options.messages;
+  } else {
+    body.prompt = prompt;
+  }
   if (options?.model?.trim()) {
     body.model = options.model.trim();
   }
