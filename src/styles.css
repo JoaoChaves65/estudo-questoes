@@ -1243,11 +1243,36 @@ select.select-input {
   }
 }
 
+.ia-model-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1.25fr) minmax(220px, 0.75fr);
+  gap: 14px;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
 .ia-model-field {
   position: relative;
   z-index: 6;
-  max-width: min(520px, 100%);
-  margin-bottom: 1rem;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.ia-model-field--model {
+  z-index: 8;
+}
+
+.ia-model-field--answer-mode {
+  z-index: 7;
+}
+
+.ia-model-app-select .app-select__list {
+  background: var(--surface-strong);
+  backdrop-filter: blur(14px);
+}
+
+[data-theme='light'] .ia-model-app-select .app-select__list {
+  background: var(--input-bg);
 }
 
 .ia-model-heading {
@@ -1275,6 +1300,12 @@ select.select-input {
 .ia-model-modal-destaque {
   font-style: italic;
   color: var(--text-secondary);
+}
+
+@media (max-width: 760px) {
+  .ia-model-controls {
+    grid-template-columns: 1fr;
+  }
 }
 
 .confirm-dialog-overlay {

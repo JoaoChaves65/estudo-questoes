@@ -113,46 +113,48 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
       }
     >
       <section className="card">
-        <div className="desempenho-field ia-model-field">
-          <div className="ia-model-heading">
-            <label htmlFor="ia-modelo" className="desempenho-field__label">
-              Modelo
-            </label>
-            <button
-              type="button"
-              className="button button--secondary ia-model-info-btn"
-              onClick={() => setModalInfoAberto(true)}
+        <div className="ia-model-controls">
+          <div className="desempenho-field ia-model-field ia-model-field--model">
+            <div className="ia-model-heading">
+              <label htmlFor="ia-modelo" className="desempenho-field__label">
+                Modelo
+              </label>
+              <button
+                type="button"
+                className="button button--secondary ia-model-info-btn"
+                onClick={() => setModalInfoAberto(true)}
+                disabled={carregando}
+                aria-label="Informações sobre o modelo selecionado"
+                title="Informações sobre o modelo"
+              >
+                <CircleHelp size={18} aria-hidden />
+              </button>
+            </div>
+            <AppSelect
+              id="ia-modelo"
+              value={modeloId}
+              options={opcoesModelo}
+              onChange={(v) => setModeloId(v as GeminiChatAllowedModelId)}
+              listaAriaLabel="Modelos Gemini disponíveis"
+              className="ia-model-app-select"
               disabled={carregando}
-              aria-label="Informações sobre o modelo selecionado"
-              title="Informações sobre o modelo"
-            >
-              <CircleHelp size={18} aria-hidden />
-            </button>
+            />
           </div>
-          <AppSelect
-            id="ia-modelo"
-            value={modeloId}
-            options={opcoesModelo}
-            onChange={(v) => setModeloId(v as GeminiChatAllowedModelId)}
-            listaAriaLabel="Modelos Gemini disponíveis"
-            className="ia-model-app-select"
-            disabled={carregando}
-          />
-        </div>
 
-        <div className="desempenho-field ia-model-field">
-          <label htmlFor="ia-answer-mode" className="desempenho-field__label">
-            Tamanho da resposta
-          </label>
-          <AppSelect
-            id="ia-answer-mode"
-            value={answerMode}
-            options={ANSWER_MODE_OPTIONS}
-            onChange={(v) => setAnswerMode(v as ChatGeminiAnswerMode)}
-            listaAriaLabel="Níveis de detalhe da resposta"
-            className="ia-model-app-select"
-            disabled={carregando}
-          />
+          <div className="desempenho-field ia-model-field ia-model-field--answer-mode">
+            <label htmlFor="ia-answer-mode" className="desempenho-field__label">
+              Tamanho da resposta
+            </label>
+            <AppSelect
+              id="ia-answer-mode"
+              value={answerMode}
+              options={ANSWER_MODE_OPTIONS}
+              onChange={(v) => setAnswerMode(v as ChatGeminiAnswerMode)}
+              listaAriaLabel="Níveis de detalhe da resposta"
+              className="ia-model-app-select"
+              disabled={carregando}
+            />
+          </div>
         </div>
 
         <form className="stack-form" onSubmit={handleSubmit}>
