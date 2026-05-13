@@ -177,8 +177,8 @@ Helper no cliente: `src/utils/geminiChat.ts` → `chatGemini(prompt)` (usa camin
 ### Testar API no computador
 
 ```bash
-cp .env.example .env.local
-# Editar .env.local com GEMINI_API_KEY
+cp .env.example .env
+# Editar .env com GEMINI_API_KEY
 
 npx vercel dev
 ```

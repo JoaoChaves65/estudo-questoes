@@ -10,9 +10,16 @@ import {
   type GeminiChatAllowedModelId,
 } from '../constants/geminiChatModels';
 import { Layout } from '../components/Layout';
-import { chatGemini } from '../utils/geminiChat';
+import { chatGemini, type ChatGeminiAnswerMode } from '../utils/geminiChat';
 
 const STORAGE_KEY = 'estudo-questoes:gemini-chat-model-id';
+const ANSWER_MODE_STORAGE_KEY = 'estudo-questoes:gemini-chat-answer-mode';
+
+const ANSWER_MODE_OPTIONS: AppSelectOption[] = [
+  { value: 'curta', label: 'Resposta curta — economiza mais tokens' },
+  { value: 'normal', label: 'Resposta normal — equilíbrio' },
+  { value: 'detalhada', label: 'Resposta detalhada — usa mais tokens' },
+];
 
 function readStoredModelId(): GeminiChatAllowedModelId {
   try {
@@ -27,6 +34,15 @@ function readStoredModelId(): GeminiChatAllowedModelId {
   }
 }
 
+function readStoredAnswerMode(): ChatGeminiAnswerMode {
+  try {
+    const raw = localStorage.getItem(ANSWER_MODE_STORAGE_KEY);
+    return raw === 'normal' || raw === 'detalhada' || raw === 'curta' ? raw : 'curta';
+  } catch {
+    return 'curta';
+  }
+}
+
 type IaTestPageProps = {
   onVoltar: () => void;
 };
@@ -38,6 +54,7 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
   const [carregando, setCarregando] = useState(false);
   const [erro, setErro] = useState('');
   const [modeloId, setModeloId] = useState<GeminiChatAllowedModelId>(() => readStoredModelId());
+  const [answerMode, setAnswerMode] = useState<ChatGeminiAnswerMode>(() => readStoredAnswerMode());
   const [modalInfoAberto, setModalInfoAberto] = useState(false);
 
   useEffect(() => {
@@ -47,6 +64,14 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
       /* ignore */
     }
   }, [modeloId]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ANSWER_MODE_STORAGE_KEY, answerMode);
+    } catch {
+      /* ignore */
+    }
+  }, [answerMode]);
 
   const metaSelecionado = useMemo(() => getGeminiChatModelMeta(modeloId), [modeloId]);
 
@@ -66,7 +91,7 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
     setModeloUsado(null);
     setCarregando(true);
     try {
-      const { text, model } = await chatGemini(texto, { model: modeloId });
+      const { text, model } = await chatGemini(texto, { model: modeloId, answerMode });
       setResposta(text);
       setModeloUsado(model ?? modeloId);
     } catch (err) {
@@ -110,6 +135,21 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
             options={opcoesModelo}
             onChange={(v) => setModeloId(v as GeminiChatAllowedModelId)}
             listaAriaLabel="Modelos Gemini disponíveis"
+            className="ia-model-app-select"
+            disabled={carregando}
+          />
+        </div>
+
+        <div className="desempenho-field ia-model-field">
+          <label htmlFor="ia-answer-mode" className="desempenho-field__label">
+            Tamanho da resposta
+          </label>
+          <AppSelect
+            id="ia-answer-mode"
+            value={answerMode}
+            options={ANSWER_MODE_OPTIONS}
+            onChange={(v) => setAnswerMode(v as ChatGeminiAnswerMode)}
+            listaAriaLabel="Níveis de detalhe da resposta"
             className="ia-model-app-select"
             disabled={carregando}
           />

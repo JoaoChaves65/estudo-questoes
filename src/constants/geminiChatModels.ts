@@ -31,10 +31,10 @@ export const GEMINI_CHAT_MODELS: GeminiChatModelMeta[] = [
   {
     id: 'gemini-2.5-flash-lite',
     label: 'Gemini 2.5 Flash Lite',
-    dropdownLabel: 'Gemini 2.5 Flash Lite — para perguntar muitas vezes seguidas',
-    destaque: 'Mais leve: ideal para revisão rápida',
+    dropdownLabel: 'Gemini 2.5 Flash Lite — econômico para perguntas rápidas',
+    destaque: 'Mais leve: gasta menos em revisão rápida',
     texto:
-      'Quando você faz várias perguntas curtas, uma atrás da outra — tipo revisão antes da prova. As respostas vêm um pouco mais diretas; para textos enormes ou assuntos bem difíceis, o modelo “completo” acima pode ajudar mais.',
+      'Use quando quiser gastar menos em perguntas curtas, uma atrás da outra — tipo revisão antes da prova. As respostas vêm mais diretas; para textos enormes ou assuntos bem difíceis, o modelo “completo” acima pode ajudar mais.',
   },
   {
     id: 'gemini-3-flash-preview',
@@ -47,10 +47,10 @@ export const GEMINI_CHAT_MODELS: GeminiChatModelMeta[] = [
   {
     id: 'gemini-3.1-flash-lite',
     label: 'Gemini 3.1 Flash Lite',
-    dropdownLabel: 'Gemini 3.1 Flash Lite — leve e econômico',
+    dropdownLabel: 'Gemini 3.1 Flash Lite — leve para economizar tokens',
     destaque: 'Menos “pesado” que o Flash completo',
     texto:
-      'Bom para muitas perguntas pequenas ou quando você quer algo mais simples e rápido. Pensa na linha 3.1, só que numa versão mais enxuta — ótima para uso em série durante o estudo.',
+      'Bom para muitas perguntas pequenas ou quando você quer economizar tokens. Pensa na linha 3.1, só que numa versão mais enxuta — ótima para uso em série durante o estudo.',
   },
   {
     id: 'gemma-4-26b-a4b-it',
