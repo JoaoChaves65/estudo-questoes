@@ -7,7 +7,7 @@ O objetivo é transformar blocos desorganizados em questões estruturadas, estud
 
 - Frontend com `React`, `TypeScript` e `Vite`
 - Estado global com `Zustand`
-- Persistência local em `localStorage` (sem backend)
+- Persistência local em `localStorage` para disciplinas, SRS e desempenho; **PostgreSQL na Vercel** para utilizadores/sessões e histórico de IA quando há conta (`DATABASE_URL` / `POSTGRES_URL`)
 - Rotas partilháveis (`react-router-dom`) com `basename` alinhado ao `base` do Vite (`/` na Vercel; `/estudo-questoes/` num build de produção local/Pages sem `VERCEL`)
 - Importação/exportação de backup JSON (formato **v2** com SRS e desempenho)
 - Parser com diagnóstico de erros por questão
@@ -21,6 +21,7 @@ O objetivo é transformar blocos desorganizados em questões estruturadas, estud
 - Abrir importação de questões por disciplina (rota `/importar/:disciplinaId`)
 - Estudo clássico e estudo inteligente (SRS) por disciplina
 - Exportar JSON de uma disciplina ou de tudo
+- Rotas **`/login`** e **`/registo`** opcionais: com sessão, o histórico do **`/ia`** sincroniza em **PostgreSQL** (Vercel Postgres / Neon).
 
 ### 2) Importação por texto bruto
 
@@ -41,7 +42,7 @@ O objetivo é transformar blocos desorganizados em questões estruturadas, estud
 - Filas ordenadas por prazo de revisão e limites opcionais de novas/revisões por dia
 - Congelamento de cartões para pausar itens pontuais sem apagar dados
 - Contagem de pendências por disciplina na página inicial  
-  Dados SRS ficam na chave `estudo-questoes-srs` (ver [Persistência](#persistência)).
+  Dados SRS ficam na chave `estudo-questoes-srs` (ver [Persistência](#persistência-local-e-conta-vercel-postgres)).
 
 ### 5) Desempenho
 
@@ -79,18 +80,32 @@ As listagens usam filtros normais no navegador. Se uma disciplina tiver um volum
 - Deploy no GitHub Pages também inclui **`404.html` igual ao `index.html`** após o build, para refrescos em URLs profundas **antes** de o SW estar ativo.
 - Atualização de app: quando houver nova versão, pode aparecer o diálogo para recarregar e aplicar o bundle novo.
 
-## Persistência local
+## Persistência local e conta (Vercel Postgres)
 
-Os dados ficam apenas no navegador. Chaves reais utilizadas pelo app:
+| Dado | Onde fica |
+| --- | --- |
+| Disciplinas, questões, tema, SRS, desempenho | `localStorage` (este dispositivo) |
+| Login / sessão | Cookie **`httpOnly`** definido pela API (`/api/auth/*`); não fica JWT em `localStorage` por defeito |
+| Histórico do chat IA (`/ia`) **com conta** | **PostgreSQL** (fonte de verdade entre dispositivos) |
+| Preferências só de UI do chat (modelo, tamanho da resposta) | `localStorage` — **cache local** rápido; não substitui o histórico na nuvem |
 
-| Chave | Armazém |
+**Regra:** com sessão iniciada, ao abrir `/ia` o cliente carrega a conversa da API (`GET /api/conversation`). O `localStorage` do Gemini (modelo, modo de resposta) é só conveniência; não é obrigatório alinhar servidor.
+
+**Segunda fase (opcional — Fase C):** pode acrescentar-se um fluxo para **importar rascunhos** já existentes só no navegador (ex.: primeira mensagens gravadas antes do registo); isso não está na UI atual.
+
+Limpar dados do site apaga só o que o browser guardou; dados em Postgres mantêm‑se até apagar conta ou usar as APIs aplicáveis.
+
+
+## Persistência local (referência rápida)
+
+| Chave local | Armazém |
 | --- | --- |
 | `estudo-questoes-storage` | Disciplinas e questões (`useDisciplinasStore`) |
 | `estudo-questoes-theme` | Tema claro/escuro |
 | `estudo-questoes-srs` | Progresso SRS |
 | `estudo-questoes-desempenho` | Estatísticas de estudo |
 
-Limpar dados do site remove tudo daí; usar exportação/importação JSON para migração.
+Limpar dados do site remove só as chaves do browser listadas aqui em cima e as do chat Gemini em `localStorage`; use exportação/importação JSON para disciplinas ou as APIs/auth para dados em nuvem.
 
 ## Stack principal
 
@@ -118,13 +133,27 @@ Em desenvolvimento: `http://localhost:5173` (basename `/`).
 - `npm run build`: typecheck + build de produção (gera `dist/` + `404.html`)
 - `npm run preview`: validar build localmente
 - `npm run test`: Vitest (`--pool=threads`)
-- `npm run lint`: ESLint sobre `src/`
+- `npm run lint`: ESLint sobre `src/`, `api/` e `shared/`
+- `npm run db:generate`: gera SQL em `drizzle/` a partir do schema (`drizzle-kit generate`)
+- `npm run db:push`: envia schema para Neon/Postgres (requer `.env`; `drizzle-kit push`)
+- `npm run db:studio`: Drizzle Studio (opcional)
+
+Após configurar Postgres, aplique migrações (por exemplo **`npm run db:push`** com `DATABASE_URL` ou use o SQL em `drizzle/`) antes de registar utilizadores na app.
 
 ## Estrutura principal
 
 ```text
+api/
+  auth/            # register, login, logout, me
+  chat.ts
+  conversation.ts
+shared/
+  db/              # schema Drizzle + client Neon
+drizzle/           # migrações SQL geradas
 src/
   components/
+  contexts/
+    AuthContext.tsx
   pages/
     HomePage.tsx
     ImportPage.tsx
@@ -132,6 +161,9 @@ src/
     SrsStudyPage.tsx
     ManageQuestionsPage.tsx
     DesempenhoPage.tsx
+    IaTestPage.tsx
+    LoginPage.tsx
+    RegisterPage.tsx
   store/
     useDisciplinasStore.ts
     useThemeStore.ts
@@ -140,6 +172,8 @@ src/
   utils/
     parser.ts
     backup.ts
+    geminiChat.ts
+    iaConversation.ts
     srsScheduler.ts
     pluralPt.ts
     …
@@ -165,25 +199,35 @@ Justificativa: GABARITO: C FEEDBACK/COMENTARIO: Explicação da resposta.
 1. Conta em [vercel.com](https://vercel.com), **Add New Project** → importar este repositório GitHub.
 2. Framework: **Vite** (detetado). Build: `npm run build`, output `dist` (padrão).
 3. Em **Settings → Environment Variables**, adicionar:
+   - **`DATABASE_URL`** (ou **`POSTGRES_URL`**) da instância Vercel Postgres / Neon — obrigatório para **registo/login** e **`/api/conversation`**.
    - `GEMINI_API_KEY` — chave da API Gemini (só no servidor; não usar prefixo `VITE_`).
    - Opcional: `GEMINI_MODEL` (ex.: `gemini-2.5-flash` ou `gemma-4-26b-a4b-it`; existe default no código).
+
+Primeiro deploy com Postgres: gere/aplique migrações (ver [Scripts](#scripts)) para criar `users`, `sessions`, `conversations` e `conversation_messages`.
 
 Na Vercel o build define `VERCEL`, por isso o `vite.config.ts` usa **`base: '/'`** e as rotas funcionam na raiz do domínio.
 
 Rota serverless: **`POST /api/chat`** — corpo JSON `{ "prompt": "..." }` ou `{ "messages": [{ "role": "user", "content": "..." }] }`. Resposta `{ "text": "..." }`.
 
-Helper no cliente: `src/utils/geminiChat.ts` → `chatGemini(prompt)` (usa caminho relativo `/api/chat`).
+- **`POST /api/auth/register`** / **`POST /api/auth/login`** — corpo `{ "email", "password" }`; definem cookie de sessão (`Set-Cookie`).
+- **`POST /api/auth/logout`**, **`GET /api/auth/me`** — estado da sessão.
+- **`GET/POST/DELETE /api/conversation`** — histórico do chat quando autenticado (`POST`: `{ append: [...] }`).
+
+Helper no cliente: `src/utils/geminiChat.ts` → `chatGemini(...)` (`credentials: 'include'` junto ao cookie).
 
 ### Testar API no computador
 
 ```bash
 cp .env.example .env
-# Editar .env com GEMINI_API_KEY
+# Editar .env: GEMINI_API_KEY e DATABASE_URL (ou POSTGRES_URL)
+
+npm run db:push
+# ou aplique drizzle/0000_init_auth_chat.sql no painel Neon
 
 npx vercel dev
 ```
 
-Abre o URL indicado (front + `/api/chat` no mesmo host).
+Abre o URL indicado (front + `/api/*` no mesmo host; cookies válidos apenas no mesmo origin).
 
 ### Build local como na Vercel
 
@@ -197,9 +241,10 @@ O workflow **Deploy to GitHub Pages** passou a ser só **`workflow_dispatch`** (
 
 ## Limitações atuais
 
-- Sem login nem sincronização em nuvem
-- Sugestão de duplicidades é manual/automática só na revisão pelo utilizador
+- Disciplinas, SRS e desempenho **não** sincronizam em nuvem (só JSON local); apenas o **histórico do chat IA** sincroniza com conta.
+- Sugestão de duplicidades é manual/automática só na revisão pelo utilizador.
+- **Fase C** (opcional): importação explícita de rascunho local da IA para Postgres — não implementada na UI.
 
 ---
 
-Projeto para estudo organizado com autonomia e dados locais.
+Projeto para estudo organizado com autonomia; dados das disciplinas ficam no dispositivo, com conta opcional na Vercel para o histórico IA.

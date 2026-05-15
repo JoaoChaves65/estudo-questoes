@@ -15,6 +15,8 @@ import { ImportPage } from './pages/ImportPage';
 import { ManageQuestionsPage } from './pages/ManageQuestionsPage';
 import { SrsStudyPage } from './pages/SrsStudyPage';
 import { IaTestPage } from './pages/IaTestPage';
+import { LoginPage } from './pages/LoginPage';
+import { RegisterPage } from './pages/RegisterPage';
 import { StudyPage } from './pages/StudyPage';
 import { useDesempenhoStore } from './store/useDesempenhoStore';
 import { useDisciplinasStore } from './store/useDisciplinasStore';
@@ -301,6 +303,9 @@ export default function App() {
         <Route path="/desempenho" element={<DesempenhoPage disciplinas={disciplinas} onVoltar={aoHome} />} />
 
         <Route path="/ia" element={<IaTestPage onVoltar={aoHome} />} />
+
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/registo" element={<RegisterPage />} />
 
         <Route
           path="/importar/:disciplinaId"

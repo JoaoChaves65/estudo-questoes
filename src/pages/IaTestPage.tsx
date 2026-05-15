@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 
+import { useNavigate } from 'react-router-dom';
+
 import { CircleHelp } from 'lucide-react';
 
 import { AppSelect, type AppSelectOption } from '../components/AppSelect';
@@ -10,11 +12,17 @@ import {
   type GeminiChatAllowedModelId,
 } from '../constants/geminiChatModels';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../contexts/AuthContext';
 import {
   chatGemini,
   type ChatGeminiAnswerMode,
   type ChatGeminiMessage,
 } from '../utils/geminiChat';
+import {
+  appendIaConversation,
+  clearIaConversationOnServer,
+  fetchIaConversation,
+} from '../utils/iaConversation';
 
 const STORAGE_KEY = 'estudo-questoes:gemini-chat-model-id';
 const ANSWER_MODE_STORAGE_KEY = 'estudo-questoes:gemini-chat-answer-mode';
@@ -62,6 +70,8 @@ function createMessageId(): string {
 }
 
 export function IaTestPage({ onVoltar }: IaTestPageProps) {
+  const navigate = useNavigate();
+  const { user, loading: authLoading, logout } = useAuth();
   const [prompt, setPrompt] = useState('');
   const [messages, setMessages] = useState<IaChatMessage[]>([]);
   const [carregando, setCarregando] = useState(false);
@@ -86,7 +96,45 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
     }
   }, [answerMode]);
 
+  useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchIaConversation();
+        if (cancelled || !data) {
+          return;
+        }
+        setMessages(
+          data.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            ...(m.model ? { model: m.model } : {}),
+          })),
+        );
+      } catch (e) {
+        if (!cancelled) {
+          setErro(e instanceof Error ? e.message : 'Não foi possível carregar a conversa sincronizada.');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authLoading, user?.id]);
+
   const metaSelecionado = useMemo(() => getGeminiChatModelMeta(modeloId), [modeloId]);
+
+  const subtituloPagina = useMemo(() => {
+    const base = 'Chamada experimental ao Gemini pela rota /api/chat (chave só no servidor).';
+    if (user) {
+      return `${base} Com sessão iniciada, o histórico desta página guarda‑se na sua conta entre dispositivos.`;
+    }
+    return `${base} Sem conta, o histórico fica só neste navegador até recarregar ou limpar a conversa.`;
+  }, [user]);
 
   const opcoesModelo = useMemo<AppSelectOption[]>(
     () => GEMINI_CHAT_MODELS.map((m) => ({ value: m.id, label: m.dropdownLabel })),
@@ -120,15 +168,28 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
         model: modeloId,
         answerMode,
       });
+      const modeloResolvido = model ?? modeloId;
       setMessages((current) => [
         ...current,
         {
           id: createMessageId(),
           role: 'model',
           content: text,
-          model: model ?? modeloId,
+          model: modeloResolvido,
         },
       ]);
+      if (user) {
+        try {
+          await appendIaConversation([
+            { role: 'user', content: texto },
+            { role: 'model', content: text, model: modeloResolvido },
+          ]);
+        } catch (syncErr) {
+          const m =
+            syncErr instanceof Error ? syncErr.message : 'Erro ao guardar o histórico no servidor.';
+          setErro(m);
+        }
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : 'Erro desconhecido.';
       setErro(msg);
@@ -137,7 +198,18 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
     }
   };
 
-  const handleClearChat = () => {
+  const handleClearChat = async () => {
+    if (carregando) {
+      return;
+    }
+    if (user) {
+      try {
+        await clearIaConversationOnServer();
+      } catch (e) {
+        setErro(e instanceof Error ? e.message : 'Erro ao limpar a conversa no servidor.');
+        return;
+      }
+    }
     setMessages([]);
     setErro('');
   };
@@ -145,11 +217,47 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
   return (
     <Layout
       titulo="Teste da IA"
-      subtitulo="Chamada experimental ao Gemini pela rota /api/chat (chave só no servidor)."
+      subtitulo={subtituloPagina}
       acoes={
-        <button type="button" className="button button--secondary" onClick={onVoltar}>
-          Voltar
-        </button>
+        <div className="hero__action-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {!authLoading && user ? (
+            <>
+              <span className="muted" style={{ alignSelf: 'center', fontSize: '0.9rem' }}>
+                {user.email}
+              </span>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => void logout()}
+                disabled={carregando}
+              >
+                Sair
+              </button>
+            </>
+          ) : !authLoading ? (
+            <>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => navigate('/login')}
+                disabled={carregando}
+              >
+                Entrar
+              </button>
+              <button
+                type="button"
+                className="button"
+                onClick={() => navigate('/registo')}
+                disabled={carregando}
+              >
+                Registar
+              </button>
+            </>
+          ) : null}
+          <button type="button" className="button button--secondary" onClick={onVoltar}>
+            Voltar
+          </button>
+        </div>
       }
     >
       <section className="card">
@@ -222,7 +330,7 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
           <button
             type="button"
             className="button button--secondary"
-            onClick={handleClearChat}
+            onClick={() => void handleClearChat()}
             disabled={carregando || messages.length === 0}
             title="Apaga o histórico usado como contexto. Ajuda a economizar tokens quando mudar de assunto."
           >

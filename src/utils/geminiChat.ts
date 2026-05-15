@@ -42,6 +42,7 @@ export async function chatGemini(prompt: string, options?: ChatGeminiOptions): P
 
   const r = await fetch('/api/chat', {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });

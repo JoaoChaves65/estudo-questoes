@@ -1,7 +1,10 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
+import { useNavigate } from 'react-router-dom';
+
 import { DisciplinaCard } from '../components/DisciplinaCard';
 import { Layout } from '../components/Layout';
+import { useAuth } from '../contexts/AuthContext';
 import type { Disciplina, ResultadoImportacao } from '../types';
 
 type HomePageProps = {
@@ -33,6 +36,8 @@ export function HomePage({
   onExportarDisciplina,
   onImportarArquivo,
 }: HomePageProps) {
+  const navigate = useNavigate();
+  const { user, loading: authLoading, logout } = useAuth();
   const [nomeDisciplina, setNomeDisciplina] = useState('');
   const [erro, setErro] = useState('');
   const [mensagem, setMensagem] = useState('');
@@ -112,6 +117,38 @@ export function HomePage({
               <button type="button" className="button button--secondary" onClick={onAbrirTesteIa}>
                 Testar IA
               </button>
+            </div>
+          </div>
+          <div className="hero__action-group">
+            <span className="hero__action-label muted">Conta</span>
+            <div className="hero__action-buttons">
+              {authLoading ? null : user ? (
+                <>
+                  <span className="muted" style={{ alignSelf: 'center', fontSize: '0.9rem' }}>
+                    {user.email}
+                  </span>
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    onClick={() => void logout()}
+                  >
+                    Sair
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    className="button button--secondary"
+                    onClick={() => navigate('/login')}
+                  >
+                    Entrar
+                  </button>
+                  <button type="button" className="button" onClick={() => navigate('/registo')}>
+                    Registar
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
