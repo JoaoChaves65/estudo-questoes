@@ -93,7 +93,7 @@ As listagens usam filtros normais no navegador. Se uma disciplina tiver um volum
 
 **Ao iniciar sessão** (‑registar ou **login** em conta já existente), com `GET /api/study-library` bem-sucedido:
 
-- **`localStorage` guarda dois sinais**: (1) **`estudoquestoes:guest-lib-dirty-v1`** ‑ houve edição SRS/desempenho/disciplinas **sem sessão** nesse ciclo no browser (só marcas depois da hidratação dos stores); (2) **`estudoquestoes:library-bound-user-ids-v1`** — utilizadores que **já** concluíram aqui o fluxo de associação.
+- **`localStorage` guarda dois sinais**: (1) **`estudoquestoes:guest-lib-dirty-v1`** ‑ houve edição SRS/desempenho/disciplinas **sem sessão** nesse ciclo no browser (só **se marca** depois da hidratação dos stores); (2) **`estudoquestoes:library-bound-user-ids-v1`** — utilizadores que **já** concluíram aqui o fluxo de associação.
 - Mostra‑se um **diálogo** sempre que há **dados na biblioteca** **e** (marcador de convidado **OU** este utilizador **ainda não** está na lista dos que já viram o fluxo neste equipamento — inclui primeira vez que entras mesmo com conta velha neste browser): **Sim** sube/funde para **essa** conta (**registo ou login**); **Não** deixa conta + nuvem alinhadas sem misturar o que só estava aqui (conta nova limpa ou só nuvem, conforme o caso).
 
 **Sem dados locais** (ou se o `GET` falhar, p.ex. offline), o comportamento mantém‑se silencioso: `GET`/`PUT`/`merge` através de `sincronizarBibliotecaComNuvem()` (offline = sem diálogo, para não bloquear uso).
