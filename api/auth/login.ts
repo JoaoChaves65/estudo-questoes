@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs';
 import { eq } from 'drizzle-orm';
 
 import * as schema from '../../shared/db/schema.js';
+import { normalizeLoginIdentifier, validateLoginIdentifierNormalized } from '../../shared/authIdentifier.js';
 import { createSession, tryGetDbOr503 } from '../_lib/authSession.js';
 
 function parseJsonBody(req: VercelRequest): unknown {
@@ -20,10 +21,6 @@ function parseJsonBody(req: VercelRequest): unknown {
   return raw;
 }
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).setHeader('Allow', 'POST').json({ error: 'Method not allowed' });
@@ -36,19 +33,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = parseJsonBody(req) as { email?: unknown; password?: unknown } | undefined;
-  const email =
-    typeof body?.email === 'string' ? normalizeEmail(body.email) : '';
+  const idRaw = typeof body?.email === 'string' ? normalizeLoginIdentifier(body.email) : '';
   const password = typeof body?.password === 'string' ? body.password : '';
 
-  if (!email || !password) {
-    res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
+  const idCheck = validateLoginIdentifierNormalized(idRaw);
+  if (!idCheck.ok) {
+    res.status(400).json({ error: idCheck.message });
+    return;
+  }
+  const identifier = idCheck.value;
+
+  if (!password) {
+    res.status(400).json({ error: 'A senha é obrigatória.' });
     return;
   }
 
   const rows = await db
     .select()
     .from(schema.users)
-    .where(eq(schema.users.email, email))
+    .where(eq(schema.users.email, identifier))
     .limit(1);
 
   const userRow = rows[0];

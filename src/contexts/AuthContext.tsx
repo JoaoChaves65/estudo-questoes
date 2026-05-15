@@ -4,10 +4,12 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
 
+import { enviarBibliotecaLocalParaNuvem } from '../utils/studyLibrarySync';
 export type AuthUser = {
   id: string;
   email: string;
@@ -26,6 +28,8 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const userRef = useRef(user);
+  userRef.current = user;
 
   const refresh = useCallback(async () => {
     try {
@@ -49,6 +53,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh]);
 
   const logout = useCallback(async () => {
+    if (userRef.current) {
+      await enviarBibliotecaLocalParaNuvem();
+    }
     try {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
     } catch {

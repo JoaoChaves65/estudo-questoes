@@ -85,17 +85,19 @@ As listagens usam filtros normais no navegador. Se uma disciplina tiver um volum
 | Dado | Onde fica |
 | --- | --- |
 | Tema UI | `localStorage` (este dispositivo) |
-| Biblioteca (**disciplinas, questões, SRS, desempenho**) com **sessão** | **PostgreSQL** + cópia em `localStorage` no browser (**sincronizada** ao iniciar sessão após `/api/auth/me`) |
-| Biblioteca sem login | só `localStorage` |
+| Biblioteca (**disciplinas, questões, SRS, desempenho**) com **sessão** | **PostgreSQL** (fonte entre dispositivos); ainda há cópia em `localStorage` na transição. Com sessão, mudanças nos stores são enviadas à nuvem em **debounce (~0,9 s)** (`PUT /api/study-library`) |
+| Biblioteca sem login | só `localStorage` até import / registo |
 | Login / sessão | Cookie **`httpOnly`** definido pela API (`/api/auth/*`); não fica JWT em `localStorage` por defeito |
 | Histórico do chat IA (`/ia`) **com conta** | **PostgreSQL** (tabela de conversas) |
 | Preferências só de UI do chat (modelo, tamanho da resposta) | `localStorage` — **cache local** rápido |
 
-**Regra:** com sessão iniciada, o cliente faz **`GET /api/study-library`**: se na nuvem estiver vazio e o local tiver dados, faz **`PUT`**; se a nuvem tiver dados e o local estiver vazio, **substitui o local**; se **ambos** tiverem dados, **funde** e grava (`PUT`): na mesma `disciplina.id`/`questão.id`, o conteúdo da nuvem prevalece; SRS combina maps (servidor sobrescreve mesmas chaves); desempenho **soma** totais como no import JSON.
+**Ao iniciar sessão** o cliente faz **`GET /api/study-library`**: se na nuvem estiver vazio e o local tiver dados, faz **`PUT`**; se a nuvem tiver dados e o local estiver vazio, **substitui o local**; se **ambos** tiverem dados, **funde** e grava (`PUT`): na mesma `disciplina.id`/`questão.id`, o conteúdo da nuvem prevalece; SRS combina maps (servidor sobrescreve mesmas chaves); desempenho **soma** totais como no import JSON.
 
-Ao **Importar JSON** com sessão iniciada, o resultado é também enviado com **`PUT /api/study-library`** logo após atualizar os stores locais.
+**Sem rede:** o navegador continua a gravar biblioteca SRS/desempenho em `localStorage` (persistência normal); os `PUT` em debounce **não** são disparados até haver rede. Quando **`window` emite `online`** e há sessão, corre um **`GET` + merge (`sincronizarBibliotecaComNuvem`)** para alinhar com o servidor (e o fluxo seguinte volta a usar debounce quando editar algo).
 
-**Payload:** backups muito grandes podem falhar no `PUT` (limite típico ~4 MB das funções serverless); prefira vários ficheiros menores ou use `db:studio`/Neon para casos extremos.
+Ao **Importar JSON** com sessão iniciada, há também **`PUT` imediato** além do debounce acima.
+
+**Payload:** backups muito grandes podem falhar no `PUT` (limite típico ~4 MB das funções serverless); prefira vários ficheiros menores ou use `db:studio`/Neon para casos extremos.
 
 **Segunda fase (opcional — Fase C):** pode acrescentar-se um fluxo para **importar rascunhos** já existentes só no navegador (ex.: mensagens IA antes do registo); não confundir com a biblioteca de disciplinas já sincronizada.
 
@@ -181,6 +183,7 @@ src/
     parser.ts
     backup.ts
     geminiChat.ts
+    subscribeDebouncedStudyCloudPush.ts
     studyLibrarySync.ts
     studyLibraryApi.ts
     studyLibraryMerge.ts
@@ -221,9 +224,8 @@ Rota serverless: **`POST /api/chat`** — corpo JSON `{ "prompt": "..." }` ou `{
 
 - **`GET /api/study-library`**, **`PUT /api/study-library`** — biblioteca quando autenticado (`PUT`: `{ disciplinas, progressoInteligente?, estatisticasDesempenho? }`, validação em [`shared/studyLibraryValidate.ts`](shared/studyLibraryValidate.ts)).
 
-Helper no cliente da biblioteca: `src/utils/studyLibrarySync.ts`.
-
-- **`POST /api/auth/register`** / **`POST /api/auth/login`** — corpo `{ "email", "password" }`; definem cookie de sessão (`Set-Cookie`).
+Helper da biblioteca: `src/utils/studyLibrarySync.ts`, `subscribeDebouncedStudyCloudPush.ts`.
+- **`POST /api/auth/register`** / **`POST /api/auth/login`** — corpo `{ "email": "<e-mail ou nome de utilizador>", "password" }`; definem cookie de sessão (`Set-Cookie`).
 - **`POST /api/auth/logout`**, **`GET /api/auth/me`** — estado da sessão.
 - **`GET/POST/DELETE /api/conversation`** — histórico do chat quando autenticado (`POST`: `{ append: [...] }`).
 

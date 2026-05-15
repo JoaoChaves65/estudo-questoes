@@ -28,6 +28,7 @@ import { criarNomeArquivoBackup, parseBackupDisciplinas, serializarBackupDiscipl
 import { baixarTextoComoArquivo } from './utils/download';
 import { parseQuestoesComDiagnostico } from './utils/parser';
 import { aplicarAtualizacaoSw, PWA_REFRESH_EVENT } from './pwaRegister';
+import { subscribeDebouncedStudyLibraryPush } from './utils/subscribeDebouncedStudyCloudPush';
 import { sincronizarBibliotecaComNuvem, enviarBibliotecaLocalParaNuvem } from './utils/studyLibrarySync';
 import { contarPendentes } from './utils/srsScheduler';
 
@@ -217,6 +218,27 @@ export default function App() {
     bibliotecaSyncUltimoUserRef.current = user.id;
     void sincronizarBibliotecaComNuvem();
   }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+    return subscribeDebouncedStudyLibraryPush({
+      debounceMs: 900,
+      getDisciplinasStore: () => useDisciplinasStore,
+      getSrsStore: () => useSrsProgressStore,
+      getDesempenhoStore: () => useDesempenhoStore,
+    });
+  }, [authLoading, user?.id]);
+
+  useEffect(() => {
+    if (authLoading || !user) {
+      return;
+    }
+    const aoVoltarOnline = () => void sincronizarBibliotecaComNuvem();
+    window.addEventListener('online', aoVoltarOnline);
+    return () => window.removeEventListener('online', aoVoltarOnline);
+  }, [authLoading, user?.id]);
 
   const handleImportarArquivo = useCallback(async (arquivo: File): Promise<ResultadoImportacao> => {
     const conteudo = await arquivo.text();

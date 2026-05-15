@@ -49,7 +49,7 @@ export function LoginPage() {
   return (
     <Layout
       titulo="Entrar"
-      subtitulo="Inicie sessão para sincronizar a conversa de IA entre dispositivos."
+      subtitulo="Inicie sessão com e-mail ou nome de utilizador (a biblioteca e o chat IA sincronizam na nuvem com sessão)."
       acoes={
         <Link to="/" className="button button--secondary">
           Início
@@ -58,11 +58,12 @@ export function LoginPage() {
     >
       <section className="card stack-form">
         <form className="stack-form" onSubmit={handleSubmit}>
-          <label htmlFor="login-email">E-mail</label>
+          <label htmlFor="login-ident">E-mail ou nome de utilizador</label>
           <input
-            id="login-email"
-            type="email"
-            autoComplete="email"
+            id="login-ident"
+            type="text"
+            autoComplete="username"
+            spellCheck={false}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={pending}

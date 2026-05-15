@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import bcrypt from 'bcryptjs';
 
 import * as schema from '../../shared/db/schema.js';
+import { normalizeLoginIdentifier, validateLoginIdentifierNormalized } from '../../shared/authIdentifier.js';
 import { createSession, tryGetDbOr503 } from '../_lib/authSession.js';
 
 function parseJsonBody(req: VercelRequest): unknown {
@@ -19,10 +20,6 @@ function parseJsonBody(req: VercelRequest): unknown {
   return raw;
 }
 
-function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).setHeader('Allow', 'POST').json({ error: 'Method not allowed' });
@@ -35,14 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   const body = parseJsonBody(req) as { email?: unknown; password?: unknown } | undefined;
-  const emailRaw =
-    typeof body?.email === 'string' ? normalizeEmail(body.email) : '';
+  const idRaw =
+    typeof body?.email === 'string' ? normalizeLoginIdentifier(body.email) : '';
   const password = typeof body?.password === 'string' ? body.password : '';
 
-  if (!emailRaw || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailRaw)) {
-    res.status(400).json({ error: 'E-mail inválido.' });
+  const idCheck = validateLoginIdentifierNormalized(idRaw);
+  if (!idCheck.ok) {
+    res.status(400).json({ error: idCheck.message });
     return;
   }
+  const identifier = idCheck.value;
 
   if (password.length < 8) {
     res.status(400).json({ error: 'Senha deve ter pelo menos 8 caracteres.' });
@@ -54,7 +53,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const [user] = await db
       .insert(schema.users)
       .values({
-        email: emailRaw,
+        email: identifier,
         passwordHash: hash,
       })
       .returning({ id: schema.users.id });
@@ -65,8 +64,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     await createSession(res, req, user.id);
-    res.status(201).json({ user: { id: user.id, email: emailRaw } });
+    res.status(201).json({ user: { id: user.id, email: identifier } });
   } catch {
-    res.status(409).json({ error: 'Este e-mail já está registado.' });
+    res.status(409).json({ error: 'Este e-mail ou nome de utilizador já está registado.' });
   }
 }

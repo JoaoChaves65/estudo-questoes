@@ -49,7 +49,7 @@ export function RegisterPage() {
   return (
     <Layout
       titulo="Registo"
-      subtitulo="Crie conta com e-mail e senha. Mínimo 8 caracteres."
+      subtitulo="Crie conta com e-mail ou nome de utilizador (mínimo 3 caracteres) e senha (mínimo 8)."
       acoes={
         <Link to="/" className="button button--secondary">
           Início
@@ -58,11 +58,13 @@ export function RegisterPage() {
     >
       <section className="card stack-form">
         <form className="stack-form" onSubmit={handleSubmit}>
-          <label htmlFor="reg-email">E-mail</label>
+          <label htmlFor="reg-ident">E-mail ou nome de utilizador</label>
           <input
-            id="reg-email"
-            type="email"
-            autoComplete="email"
+            id="reg-ident"
+            type="text"
+            autoComplete="username"
+            spellCheck={false}
+            minLength={3}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={pending}
