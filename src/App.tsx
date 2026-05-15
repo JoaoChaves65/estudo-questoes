@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   Navigate,
@@ -18,6 +18,7 @@ import { IaTestPage } from './pages/IaTestPage';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { StudyPage } from './pages/StudyPage';
+import { useAuth } from './contexts/AuthContext';
 import { useDesempenhoStore } from './store/useDesempenhoStore';
 import { useDisciplinasStore } from './store/useDisciplinasStore';
 import { useSrsProgressStore } from './store/useSrsProgressStore';
@@ -27,6 +28,7 @@ import { criarNomeArquivoBackup, parseBackupDisciplinas, serializarBackupDiscipl
 import { baixarTextoComoArquivo } from './utils/download';
 import { parseQuestoesComDiagnostico } from './utils/parser';
 import { aplicarAtualizacaoSw, PWA_REFRESH_EVENT } from './pwaRegister';
+import { sincronizarBibliotecaComNuvem, enviarBibliotecaLocalParaNuvem } from './utils/studyLibrarySync';
 import { contarPendentes } from './utils/srsScheduler';
 
 const THEME_COLOR_META = '#0f172a';
@@ -87,6 +89,8 @@ function InteligenteDisciplinaRoute({
 
 export default function App() {
   const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+  const bibliotecaSyncUltimoUserRef = useRef<string | null>(null);
 
   const disciplinas = useDisciplinasStore((state) => state.disciplinas);
   const adicionarDisciplina = useDisciplinasStore((state) => state.adicionarDisciplina);
@@ -199,7 +203,22 @@ export default function App() {
     baixarTextoComoArquivo(conteudo, criarNomeArquivoBackup(disciplina.nome));
   };
 
-  const handleImportarArquivo = async (arquivo: File): Promise<ResultadoImportacao> => {
+  useEffect(() => {
+    if (authLoading) {
+      return;
+    }
+    if (!user) {
+      bibliotecaSyncUltimoUserRef.current = null;
+      return;
+    }
+    if (bibliotecaSyncUltimoUserRef.current === user.id) {
+      return;
+    }
+    bibliotecaSyncUltimoUserRef.current = user.id;
+    void sincronizarBibliotecaComNuvem();
+  }, [authLoading, user]);
+
+  const handleImportarArquivo = useCallback(async (arquivo: File): Promise<ResultadoImportacao> => {
     const conteudo = await arquivo.text();
     const parsed = parseBackupDisciplinas(conteudo);
     const resultado = importarDisciplinas({ disciplinas: parsed.disciplinas });
@@ -209,8 +228,16 @@ export default function App() {
     if (parsed.estatisticasDesempenho) {
       importarDesempenho(parsed.estatisticasDesempenho);
     }
+    if (user) {
+      await enviarBibliotecaLocalParaNuvem();
+    }
     return resultado;
-  };
+  }, [
+    importarDesempenho,
+    importarDisciplinas,
+    importarSnapshotSrs,
+    user,
+  ]);
 
   const handleExcluirQuestao = useCallback(
     (disciplinaId: string, questaoId: string) => {

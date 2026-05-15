@@ -84,14 +84,20 @@ As listagens usam filtros normais no navegador. Se uma disciplina tiver um volum
 
 | Dado | Onde fica |
 | --- | --- |
-| Disciplinas, questões, tema, SRS, desempenho | `localStorage` (este dispositivo) |
+| Tema UI | `localStorage` (este dispositivo) |
+| Biblioteca (**disciplinas, questões, SRS, desempenho**) com **sessão** | **PostgreSQL** + cópia em `localStorage` no browser (**sincronizada** ao iniciar sessão após `/api/auth/me`) |
+| Biblioteca sem login | só `localStorage` |
 | Login / sessão | Cookie **`httpOnly`** definido pela API (`/api/auth/*`); não fica JWT em `localStorage` por defeito |
-| Histórico do chat IA (`/ia`) **com conta** | **PostgreSQL** (fonte de verdade entre dispositivos) |
-| Preferências só de UI do chat (modelo, tamanho da resposta) | `localStorage` — **cache local** rápido; não substitui o histórico na nuvem |
+| Histórico do chat IA (`/ia`) **com conta** | **PostgreSQL** (tabela de conversas) |
+| Preferências só de UI do chat (modelo, tamanho da resposta) | `localStorage` — **cache local** rápido |
 
-**Regra:** com sessão iniciada, ao abrir `/ia` o cliente carrega a conversa da API (`GET /api/conversation`). O `localStorage` do Gemini (modelo, modo de resposta) é só conveniência; não é obrigatório alinhar servidor.
+**Regra:** com sessão iniciada, o cliente faz **`GET /api/study-library`**: se na nuvem estiver vazio e o local tiver dados, faz **`PUT`**; se a nuvem tiver dados e o local estiver vazio, **substitui o local**; se **ambos** tiverem dados, **funde** e grava (`PUT`): na mesma `disciplina.id`/`questão.id`, o conteúdo da nuvem prevalece; SRS combina maps (servidor sobrescreve mesmas chaves); desempenho **soma** totais como no import JSON.
 
-**Segunda fase (opcional — Fase C):** pode acrescentar-se um fluxo para **importar rascunhos** já existentes só no navegador (ex.: primeira mensagens gravadas antes do registo); isso não está na UI atual.
+Ao **Importar JSON** com sessão iniciada, o resultado é também enviado com **`PUT /api/study-library`** logo após atualizar os stores locais.
+
+**Payload:** backups muito grandes podem falhar no `PUT` (limite típico ~4 MB das funções serverless); prefira vários ficheiros menores ou use `db:studio`/Neon para casos extremos.
+
+**Segunda fase (opcional — Fase C):** pode acrescentar-se um fluxo para **importar rascunhos** já existentes só no navegador (ex.: mensagens IA antes do registo); não confundir com a biblioteca de disciplinas já sincronizada.
 
 Limpar dados do site apaga só o que o browser guardou; dados em Postgres mantêm‑se até apagar conta ou usar as APIs aplicáveis.
 
@@ -147,8 +153,10 @@ api/
   auth/            # register, login, logout, me
   chat.ts
   conversation.ts
+  study-library.ts
 shared/
   db/              # schema Drizzle + client Neon
+  studyLibraryValidate.ts
 drizzle/           # migrações SQL geradas
 src/
   components/
@@ -173,7 +181,9 @@ src/
     parser.ts
     backup.ts
     geminiChat.ts
-    iaConversation.ts
+    studyLibrarySync.ts
+    studyLibraryApi.ts
+    studyLibraryMerge.ts
     srsScheduler.ts
     pluralPt.ts
     …
@@ -199,15 +209,19 @@ Justificativa: GABARITO: C FEEDBACK/COMENTARIO: Explicação da resposta.
 1. Conta em [vercel.com](https://vercel.com), **Add New Project** → importar este repositório GitHub.
 2. Framework: **Vite** (detetado). Build: `npm run build`, output `dist` (padrão).
 3. Em **Settings → Environment Variables**, adicionar:
-   - **`DATABASE_URL`** (ou **`POSTGRES_URL`**) da instância Vercel Postgres / Neon — obrigatório para **registo/login** e **`/api/conversation`**.
+   - **`DATABASE_URL`** (ou **`POSTGRES_URL`**) da instância Vercel Postgres / Neon — obrigatório para **registo/login**, **`/api/conversation`** e **`/api/study-library`**.
    - `GEMINI_API_KEY` — chave da API Gemini (só no servidor; não usar prefixo `VITE_`).
    - Opcional: `GEMINI_MODEL` (ex.: `gemini-2.5-flash` ou `gemma-4-26b-a4b-it`; existe default no código).
 
-Primeiro deploy com Postgres: gere/aplique migrações (ver [Scripts](#scripts)) para criar `users`, `sessions`, `conversations` e `conversation_messages`.
+Primeiro deploy com Postgres: gere/aplique migrações (ver [Scripts](#scripts)) até incluir **`study_disciplines`**, **`study_questions`**, **`user_srs_progress`** e **`user_desempenho`** (pastas `drizzle/*.sql`).
 
 Na Vercel o build define `VERCEL`, por isso o `vite.config.ts` usa **`base: '/'`** e as rotas funcionam na raiz do domínio.
 
 Rota serverless: **`POST /api/chat`** — corpo JSON `{ "prompt": "..." }` ou `{ "messages": [{ "role": "user", "content": "..." }] }`. Resposta `{ "text": "..." }`.
+
+- **`GET /api/study-library`**, **`PUT /api/study-library`** — biblioteca quando autenticado (`PUT`: `{ disciplinas, progressoInteligente?, estatisticasDesempenho? }`, validação em [`shared/studyLibraryValidate.ts`](shared/studyLibraryValidate.ts)).
+
+Helper no cliente da biblioteca: `src/utils/studyLibrarySync.ts`.
 
 - **`POST /api/auth/register`** / **`POST /api/auth/login`** — corpo `{ "email", "password" }`; definem cookie de sessão (`Set-Cookie`).
 - **`POST /api/auth/logout`**, **`GET /api/auth/me`** — estado da sessão.
@@ -241,10 +255,10 @@ O workflow **Deploy to GitHub Pages** passou a ser só **`workflow_dispatch`** (
 
 ## Limitações atuais
 
-- Disciplinas, SRS e desempenho **não** sincronizam em nuvem (só JSON local); apenas o **histórico do chat IA** sincroniza com conta.
+- **Sem sync em tempo real** entre abas ou dispositivos: os dados atualizados num aparelho só aparecem noutro na **próxima** abertura com sessão iniciada (ou após novo `PUT`/`import`).
 - Sugestão de duplicidades é manual/automática só na revisão pelo utilizador.
-- **Fase C** (opcional): importação explícita de rascunho local da IA para Postgres — não implementada na UI.
+- **Fase C** (opcional): importação explícita de rascunho local da IA para Postgres sem passar pela UI — não aplicado.
 
 ---
 
-Projeto para estudo organizado com autonomia; dados das disciplinas ficam no dispositivo, com conta opcional na Vercel para o histórico IA.
+Projeto para estudo organizado com autonomia; conta opcional sincroniza **biblioteca** e **histórico IA** na base Postgres (Neon/Vercel).

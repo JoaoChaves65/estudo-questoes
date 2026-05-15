@@ -8,6 +8,13 @@
       "when": 1778882820755,
       "tag": "0000_init_auth_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1778885239112,
+      "tag": "0001_study_library",
+      "breakpoints": true
     }
   ]
 }

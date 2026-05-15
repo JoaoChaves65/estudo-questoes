@@ -22,7 +22,7 @@ function combinarEstat(a: EstatQuestao, b: EstatQuestao): EstatQuestao {
 }
 
 /** Importação: soma totais quando a mesma questão aparece nos dois snapshots. */
-function mergeDesempenho(
+export function mergeDesempenhoPorDisciplina(
   atual: DesempenhoSnapshot['porDisciplina'],
   incoming: DesempenhoSnapshot['porDisciplina'],
 ): DesempenhoSnapshot['porDisciplina'] {
@@ -86,7 +86,7 @@ export const useDesempenhoStore = create<DesempenhoState>()(
 
       importarSnapshot: (snapshot) => {
         set((state) => ({
-          porDisciplina: mergeDesempenho(state.porDisciplina, snapshot.porDisciplina),
+          porDisciplina: mergeDesempenhoPorDisciplina(state.porDisciplina, snapshot.porDisciplina),
         }));
       },
 

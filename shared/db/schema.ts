@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, uuid, varchar, index } from 'drizzle-orm/pg-core';
+import { pgTable, text, timestamp, uuid, varchar, index, jsonb, uniqueIndex } from 'drizzle-orm/pg-core';
 
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
@@ -54,3 +54,53 @@ export const conversationMessages = pgTable(
     convMsgsConvIdIdx: index('conversation_messages_conv_id_idx').on(t.conversationId),
   }),
 );
+
+export const studyDisciplines = pgTable(
+  'study_disciplines',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    externalId: varchar('external_id', { length: 64 }).notNull(),
+    name: varchar('name', { length: 512 }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    studyDisciplinesUserExtUq: uniqueIndex('study_disciplines_user_ext_uq').on(t.userId, t.externalId),
+    studyDisciplinesUserIdx: index('study_disciplines_user_id_idx').on(t.userId),
+  }),
+);
+
+export const studyQuestions = pgTable(
+  'study_questions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    disciplineId: uuid('discipline_id')
+      .notNull()
+      .references(() => studyDisciplines.id, { onDelete: 'cascade' }),
+    externalId: varchar('external_id', { length: 64 }).notNull(),
+    payload: jsonb('payload').notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => ({
+    studyQuestionsDiscExtUq: uniqueIndex('study_questions_disc_ext_uq').on(t.disciplineId, t.externalId),
+    studyQuestionsDisciplineIdx: index('study_questions_discipline_id_idx').on(t.disciplineId),
+  }),
+);
+
+export const userSrsProgress = pgTable('user_srs_progress', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  data: jsonb('data').notNull(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+export const userDesempenho = pgTable('user_desempenho', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  data: jsonb('data'),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+});
