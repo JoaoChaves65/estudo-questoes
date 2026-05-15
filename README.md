@@ -91,7 +91,14 @@ As listagens usam filtros normais no navegador. Se uma disciplina tiver um volum
 | Histórico do chat IA (`/ia`) **com conta** | **PostgreSQL** (tabela de conversas) |
 | Preferências só de UI do chat (modelo, tamanho da resposta) | `localStorage` — **cache local** rápido |
 
-**Ao iniciar sessão** o cliente faz **`GET /api/study-library`**: se na nuvem estiver vazio e o local tiver dados, faz **`PUT`**; se a nuvem tiver dados e o local estiver vazio, **substitui o local**; se **ambos** tiverem dados, **funde** e grava (`PUT`): na mesma `disciplina.id`/`questão.id`, o conteúdo da nuvem prevalece; SRS combina maps (servidor sobrescreve mesmas chaves); desempenho **soma** totais como no import JSON.
+**Ao iniciar sessão** (‑registar ou **login** em conta já existente), com `GET /api/study-library` bem-sucedido:
+
+- **`localStorage` guarda dois sinais**: (1) **`estudoquestoes:guest-lib-dirty-v1`** ‑ houve edição SRS/desempenho/disciplinas **sem sessão** nesse ciclo no browser (só marcas depois da hidratação dos stores); (2) **`estudoquestoes:library-bound-user-ids-v1`** — utilizadores que **já** concluíram aqui o fluxo de associação.
+- Mostra‑se um **diálogo** sempre que há **dados na biblioteca** **e** (marcador de convidado **OU** este utilizador **ainda não** está na lista dos que já viram o fluxo neste equipamento — inclui primeira vez que entras mesmo com conta velha neste browser): **Sim** sube/funde para **essa** conta (**registo ou login**); **Não** deixa conta + nuvem alinhadas sem misturar o que só estava aqui (conta nova limpa ou só nuvem, conforme o caso).
+
+**Sem dados locais** (ou se o `GET` falhar, p.ex. offline), o comportamento mantém‑se silencioso: `GET`/`PUT`/`merge` através de `sincronizarBibliotecaComNuvem()` (offline = sem diálogo, para não bloquear uso).
+
+**Fusão (quando há dados em ambos os lados e escolhes associar):** na mesma `disciplina.id`/`questão.id`, o conteúdo da nuvem prevalece; SRS combina maps (servidor sobrescreve mesmas chaves); desempenho **soma** totais como no import JSON.
 
 **Sem rede:** o navegador continua a gravar biblioteca SRS/desempenho em `localStorage` (persistência normal); os `PUT` em debounce **não** são disparados até haver rede. Quando **`window` emite `online`** e há sessão, corre um **`GET` + merge (`sincronizarBibliotecaComNuvem`)** para alinhar com o servidor (e o fluxo seguinte volta a usar debounce quando editar algo).
 

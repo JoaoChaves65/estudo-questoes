@@ -7,6 +7,10 @@ import { useThemeStore } from '../store/useThemeStore';
 type LayoutProps = {
   titulo: string;
   subtitulo: string;
+  /** Esconder o texto “Estudo Automatizado” quando o hero já comunica bem o propósito. */
+  omitirEyebrow?: boolean;
+  /** Modifier extra da barra de ações à direita (ex.: toolbar compacta na home). */
+  classNameHeroAcoes?: string;
   acoes?: ReactNode;
   compactHeader?: ReactNode;
   children: ReactNode;
@@ -15,6 +19,8 @@ type LayoutProps = {
 export function Layout({
   titulo,
   subtitulo,
+  omitirEyebrow = false,
+  classNameHeroAcoes,
   acoes,
   compactHeader,
   children,
@@ -55,11 +61,17 @@ export function Layout({
     <div className="app-shell">
       <header className="hero">
         <div>
-          <p className="hero__eyebrow">Estudo Automatizado</p>
+          {!omitirEyebrow ? (
+            <p className="hero__eyebrow">Estudo Automatizado</p>
+          ) : null}
           <h1>{titulo}</h1>
           <p className="hero__subtitle">{subtitulo}</p>
         </div>
-        <div className="hero__actions">
+        <div
+          className={
+            classNameHeroAcoes ? `hero__actions ${classNameHeroAcoes}` : 'hero__actions'
+          }
+        >
           <button
             type="button"
             className="button button--secondary theme-toggle"

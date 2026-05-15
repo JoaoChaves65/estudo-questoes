@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import {
   Navigate,
@@ -8,6 +8,7 @@ import {
   useParams,
 } from 'react-router-dom';
 
+import { StudyLibraryAssociateDialog } from './components/StudyLibraryAssociateDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
 import { DesempenhoPage } from './pages/DesempenhoPage';
 import { HomePage } from './pages/HomePage';
@@ -27,9 +28,25 @@ import type { Disciplina, ResultadoImportacao } from './types';
 import { criarNomeArquivoBackup, parseBackupDisciplinas, serializarBackupDisciplinas } from './utils/backup';
 import { baixarTextoComoArquivo } from './utils/download';
 import { parseQuestoesComDiagnostico } from './utils/parser';
+import { fetchStudyLibrary } from './utils/studyLibraryApi';
 import { aplicarAtualizacaoSw, PWA_REFRESH_EVENT } from './pwaRegister';
 import { subscribeDebouncedStudyLibraryPush } from './utils/subscribeDebouncedStudyCloudPush';
-import { sincronizarBibliotecaComNuvem, enviarBibliotecaLocalParaNuvem } from './utils/studyLibrarySync';
+import {
+  bibliotecaLocalPareceTerDados,
+  enviarBibliotecaLocalParaNuvem,
+  limparMarcadorAssociacaoBibliotecaPendente,
+  marcarAssociacaoBibliotecaPendenteEscolha,
+  rejeitarDadosLocaisNuvemVazia,
+  sincronizarBibliotecaComNuvem,
+  substituirLocalPelosDadosNuvem,
+} from './utils/studyLibrarySync';
+import {
+  houveBibliotecaEditadaSemSessaoRecente,
+  limparMarcadorBibliotecaEditadaSemSessao,
+  marcarBibliotecaEditadaSemSessao,
+  registarAssociacaoBibliotecaCompletaParaUtilizador,
+  utilizadorJaConcluiuAssociacaoBiblioteca,
+} from './utils/studyLibraryGuestBind';
 import { contarPendentes } from './utils/srsScheduler';
 
 const THEME_COLOR_META = '#0f172a';
@@ -91,7 +108,6 @@ function InteligenteDisciplinaRoute({
 export default function App() {
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const bibliotecaSyncUltimoUserRef = useRef<string | null>(null);
 
   const disciplinas = useDisciplinasStore((state) => state.disciplinas);
   const adicionarDisciplina = useDisciplinasStore((state) => state.adicionarDisciplina);
@@ -123,6 +139,13 @@ export default function App() {
   const removerDisciplinaDesempenho = useDesempenhoStore((state) => state.removerDisciplina);
 
   const theme = useThemeStore((state) => state.theme);
+
+  const [associateGateOpen, setAssociateGateOpen] = useState(false);
+  const [bindPrompt, setBindPrompt] = useState<
+    null | { variant: 'nuvem-vazia' | 'nuvem-com-dados'; email: string }
+  >(null);
+  const [bindBusy, setBindBusy] = useState(false);
+  const [bindErro, setBindErro] = useState<string | null>(null);
 
   const [pwaAtualizacaoPendente, setPwaAtualizacaoPendente] = useState(false);
 
@@ -205,22 +228,124 @@ export default function App() {
   };
 
   useEffect(() => {
-    if (authLoading) {
+    if (authLoading || user) {
       return;
     }
-    if (!user) {
-      bibliotecaSyncUltimoUserRef.current = null;
-      return;
-    }
-    if (bibliotecaSyncUltimoUserRef.current === user.id) {
-      return;
-    }
-    bibliotecaSyncUltimoUserRef.current = user.id;
-    void sincronizarBibliotecaComNuvem();
+    setAssociateGateOpen(false);
+    setBindPrompt(null);
+    setBindBusy(false);
+    setBindErro(null);
+    limparMarcadorAssociacaoBibliotecaPendente();
   }, [authLoading, user]);
 
   useEffect(() => {
-    if (authLoading || !user) {
+    if (authLoading || user) {
+      return undefined;
+    }
+
+    const podeMarcarConvidado = { current: false };
+    let rafExterno = 0;
+    let rafInterno = 0;
+    rafExterno = requestAnimationFrame(() => {
+      rafInterno = requestAnimationFrame(() => {
+        podeMarcarConvidado.current = true;
+      });
+    });
+
+    function marcarAoEditarBibliotecaConvidado() {
+      if (podeMarcarConvidado.current) {
+        marcarBibliotecaEditadaSemSessao();
+      }
+    }
+
+    const sairDisciplinas = useDisciplinasStore.subscribe(marcarAoEditarBibliotecaConvidado);
+    const sairSrs = useSrsProgressStore.subscribe(marcarAoEditarBibliotecaConvidado);
+    const sairDes = useDesempenhoStore.subscribe(marcarAoEditarBibliotecaConvidado);
+
+    return () => {
+      cancelAnimationFrame(rafExterno);
+      cancelAnimationFrame(rafInterno);
+      podeMarcarConvidado.current = false;
+      sairDisciplinas();
+      sairSrs();
+      sairDes();
+    };
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    let vivo = true;
+
+    async function concluirFluxoBibliotecaAposOkNaNuvem(
+      utilizadorId: string,
+      syncCorreuBem: boolean,
+    ): Promise<void> {
+      if (!vivo) return;
+      limparMarcadorAssociacaoBibliotecaPendente();
+      setBindPrompt(null);
+      setBindBusy(false);
+      setBindErro(null);
+      setAssociateGateOpen(true);
+      if (syncCorreuBem) {
+        registarAssociacaoBibliotecaCompletaParaUtilizador(utilizadorId);
+        limparMarcadorBibliotecaEditadaSemSessao();
+      }
+    }
+
+    async function arranqueBibliotecaNuvem() {
+      if (authLoading || user == null) {
+        return;
+      }
+
+      const uid = user.id;
+
+      async function apenasSincronizarEContinuarFluxo() {
+        const r = await sincronizarBibliotecaComNuvem();
+        await concluirFluxoBibliotecaAposOkNaNuvem(uid, r.ok);
+      }
+
+      const localTemDadosBiblioteca = bibliotecaLocalPareceTerDados();
+      const edicaoRecenteConvidado = houveBibliotecaEditadaSemSessaoRecente();
+      const associacaoJaFeitaNesteEquipamento = utilizadorJaConcluiuAssociacaoBiblioteca(uid);
+
+      if (!localTemDadosBiblioteca) {
+        await apenasSincronizarEContinuarFluxo();
+        return;
+      }
+
+      try {
+        const serverPayload = await fetchStudyLibrary();
+        if (!vivo) return;
+
+        const serverEmpty = serverPayload.empty || serverPayload.disciplinas.length === 0;
+
+        /** Novo utilizador OU convidado com alterações antes do login OU primeira vez este browser. */
+        const mostrarOpcaoExplicita =
+          edicaoRecenteConvidado || !associacaoJaFeitaNesteEquipamento;
+
+        if (mostrarOpcaoExplicita) {
+          marcarAssociacaoBibliotecaPendenteEscolha(uid);
+          setBindPrompt({
+            email: user.email,
+            variant: serverEmpty ? 'nuvem-vazia' : 'nuvem-com-dados',
+          });
+          return;
+        }
+
+        await apenasSincronizarEContinuarFluxo();
+      } catch {
+        const r = await sincronizarBibliotecaComNuvem();
+        await concluirFluxoBibliotecaAposOkNaNuvem(uid, r.ok);
+      }
+    }
+
+    void arranqueBibliotecaNuvem();
+    return () => {
+      vivo = false;
+    };
+  }, [authLoading, user]);
+
+  useEffect(() => {
+    if (authLoading || !user || !associateGateOpen) {
       return;
     }
     return subscribeDebouncedStudyLibraryPush({
@@ -229,16 +354,59 @@ export default function App() {
       getSrsStore: () => useSrsProgressStore,
       getDesempenhoStore: () => useDesempenhoStore,
     });
-  }, [authLoading, user?.id]);
+  }, [authLoading, user?.id, associateGateOpen]);
 
   useEffect(() => {
-    if (authLoading || !user) {
+    if (authLoading || !user || !associateGateOpen) {
       return;
     }
     const aoVoltarOnline = () => void sincronizarBibliotecaComNuvem();
     window.addEventListener('online', aoVoltarOnline);
     return () => window.removeEventListener('online', aoVoltarOnline);
-  }, [authLoading, user?.id]);
+  }, [authLoading, user?.id, associateGateOpen]);
+
+  const finalizarAssociacaoBibliotecaSessao = (userId: string) => {
+    registarAssociacaoBibliotecaCompletaParaUtilizador(userId);
+    limparMarcadorBibliotecaEditadaSemSessao();
+    limparMarcadorAssociacaoBibliotecaPendente();
+    setBindPrompt(null);
+    setBindBusy(false);
+    setBindErro(null);
+    setAssociateGateOpen(true);
+  };
+
+  const aoBibliotecaEscolhaAssociar = async () => {
+    if (user == null || bindPrompt == null) {
+      return;
+    }
+    setBindBusy(true);
+    setBindErro(null);
+    const r = await sincronizarBibliotecaComNuvem();
+    setBindBusy(false);
+    if (!r.ok) {
+      setBindErro(r.message);
+      return;
+    }
+    finalizarAssociacaoBibliotecaSessao(user.id);
+  };
+
+  const aoBibliotecaEscolhaNaoAssociar = async () => {
+    if (user == null || bindPrompt == null) {
+      return;
+    }
+    setBindBusy(true);
+    setBindErro(null);
+    const r =
+      bindPrompt.variant === 'nuvem-vazia'
+        ? await rejeitarDadosLocaisNuvemVazia()
+        : await substituirLocalPelosDadosNuvem();
+    setBindBusy(false);
+    if (!r.ok) {
+      setBindErro(r.message);
+      return;
+    }
+    finalizarAssociacaoBibliotecaSessao(user.id);
+  };
 
   const handleImportarArquivo = useCallback(async (arquivo: File): Promise<ResultadoImportacao> => {
     const conteudo = await arquivo.text();
@@ -250,7 +418,7 @@ export default function App() {
     if (parsed.estatisticasDesempenho) {
       importarDesempenho(parsed.estatisticasDesempenho);
     }
-    if (user) {
+    if (user && associateGateOpen) {
       await enviarBibliotecaLocalParaNuvem();
     }
     return resultado;
@@ -259,6 +427,7 @@ export default function App() {
     importarDisciplinas,
     importarSnapshotSrs,
     user,
+    associateGateOpen,
   ]);
 
   const handleExcluirQuestao = useCallback(
@@ -329,6 +498,15 @@ export default function App() {
 
   return (
     <>
+      <StudyLibraryAssociateDialog
+        open={bindPrompt !== null && user !== null}
+        contaEmail={bindPrompt?.email ?? ''}
+        variant={bindPrompt?.variant ?? 'nuvem-vazia'}
+        ocupado={bindBusy}
+        erro={bindErro}
+        aoAssociar={() => void aoBibliotecaEscolhaAssociar()}
+        aoNaoAssociar={() => void aoBibliotecaEscolhaNaoAssociar()}
+      />
       <Routes>
         <Route path="/" element={<HomePage {...homeProps} />} />
 

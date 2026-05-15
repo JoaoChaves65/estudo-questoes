@@ -9,7 +9,10 @@ import {
   type ReactNode,
 } from 'react';
 
-import { enviarBibliotecaLocalParaNuvem } from '../utils/studyLibrarySync';
+import {
+  associacaoBibliotecaPendenteDeEscolha,
+  enviarBibliotecaLocalParaNuvem,
+} from '../utils/studyLibrarySync';
 export type AuthUser = {
   id: string;
   email: string;
@@ -54,7 +57,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(async () => {
     if (userRef.current) {
+    if (!associacaoBibliotecaPendenteDeEscolha()) {
       await enviarBibliotecaLocalParaNuvem();
+    }
     }
     try {
       await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });

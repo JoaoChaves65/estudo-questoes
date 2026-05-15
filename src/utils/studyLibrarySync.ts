@@ -15,13 +15,73 @@ function readBundleFromStores(): StudyLibraryBundle {
   return { disciplinas, progressoInteligente, estatisticasDesempenho };
 }
 
-function aplicarBundleNasStores(bundle: StudyLibraryBundle): void {
+/** Aplica um snapshot completo (ex.: apenas nuvem, sem merge com outro lado). */
+export function aplicarBibliotecaNasStores(bundle: StudyLibraryBundle): void {
   useDisciplinasStore.setState({ disciplinas: bundle.disciplinas });
   useSrsProgressStore.setState({ porDisciplina: bundle.progressoInteligente.porDisciplina });
   useSrsProgressStore.getState().sincronizarRolloverGlobal(Date.now());
   useDesempenhoStore.setState({
     porDisciplina: bundle.estatisticasDesempenho?.porDisciplina ?? {},
   });
+}
+
+export const STUDY_LIBRARY_BUNDLE_VAZIO: StudyLibraryBundle = {
+  disciplinas: [],
+  progressoInteligente: { porDisciplina: {} },
+  estatisticasDesempenho: null,
+};
+
+/** SRS/desempenho órfão (sem disciplinas) conta como “sessão anterior” neste browser. */
+export function bibliotecaLocalPareceTerDados(): boolean {
+  if (useDisciplinasStore.getState().disciplinas.length > 0) {
+    return true;
+  }
+  if (Object.keys(useSrsProgressStore.getState().porDisciplina).length > 0) {
+    return true;
+  }
+  return Object.keys(useDesempenhoStore.getState().porDisciplina).length > 0;
+}
+
+export function limparBibliotecaLocalNoBrowser(): void {
+  aplicarBibliotecaNasStores(STUDY_LIBRARY_BUNDLE_VAZIO);
+}
+
+/** Após GET: substitui o local pela nuvem (sem merge com dados que estavam no browser). */
+export async function substituirLocalPelosDadosNuvem(): Promise<
+  { ok: true } | { ok: false; message: string }
+> {
+  let server: Awaited<ReturnType<typeof fetchStudyLibrary>>;
+  try {
+    server = await fetchStudyLibrary();
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Falha ao ler biblioteca na nuvem.';
+    return { ok: false, message: msg };
+  }
+  const serverBundle: StudyLibraryBundle = {
+    disciplinas: server.disciplinas,
+    progressoInteligente: server.progressoInteligente,
+    estatisticasDesempenho: server.estatisticasDesempenho,
+  };
+  aplicarBibliotecaNasStores(serverBundle);
+  return { ok: true };
+}
+
+/** Conta nova (nuvem vazia): apaga só o dispositivo e confirma snapshot vazio no servidor. */
+export async function rejeitarDadosLocaisNuvemVazia(): Promise<
+  { ok: true } | { ok: false; message: string }
+> {
+  limparBibliotecaLocalNoBrowser();
+  try {
+    await putStudyLibrary({
+      disciplinas: STUDY_LIBRARY_BUNDLE_VAZIO.disciplinas,
+      progressoInteligente: STUDY_LIBRARY_BUNDLE_VAZIO.progressoInteligente,
+      estatisticasDesempenho: STUDY_LIBRARY_BUNDLE_VAZIO.estatisticasDesempenho,
+    });
+    return { ok: true };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : 'Falha ao gravar biblioteca na nuvem.';
+    return { ok: false, message: msg };
+  }
 }
 
 /**
@@ -41,7 +101,12 @@ export async function sincronizarBibliotecaComNuvem(): Promise<
 
   const local = readBundleFromStores();
   const serverEmpty = server.empty || server.disciplinas.length === 0;
-  const localEmpty = local.disciplinas.length === 0;
+  const localAlgumDado =
+    local.disciplinas.length > 0 ||
+    Object.keys(local.progressoInteligente.porDisciplina).length > 0 ||
+    (local.estatisticasDesempenho != null &&
+      Object.keys(local.estatisticasDesempenho.porDisciplina).length > 0);
+  const localEmpty = !localAlgumDado;
 
   try {
     if (serverEmpty && localEmpty) {
@@ -63,7 +128,7 @@ export async function sincronizarBibliotecaComNuvem(): Promise<
         progressoInteligente: server.progressoInteligente,
         estatisticasDesempenho: server.estatisticasDesempenho,
       };
-      aplicarBundleNasStores(serverBundle);
+      aplicarBibliotecaNasStores(serverBundle);
       return { ok: true };
     }
 
@@ -73,7 +138,7 @@ export async function sincronizarBibliotecaComNuvem(): Promise<
       estatisticasDesempenho: server.estatisticasDesempenho,
     };
     const merged = mergeStudyLibraryBundles(serverBundle, local);
-    aplicarBundleNasStores(merged);
+    aplicarBibliotecaNasStores(merged);
     await putStudyLibrary({
       disciplinas: merged.disciplinas,
       progressoInteligente: merged.progressoInteligente,
@@ -83,6 +148,32 @@ export async function sincronizarBibliotecaComNuvem(): Promise<
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Falha ao gravar biblioteca na nuvem.';
     return { ok: false, message: msg };
+  }
+}
+
+const STORAGE_LIBRARY_BIND_PENDING = 'estudoquestoes:library-bind-pending';
+
+export function associacaoBibliotecaPendenteDeEscolha(): boolean {
+  try {
+    return sessionStorage.getItem(STORAGE_LIBRARY_BIND_PENDING) !== null;
+  } catch {
+    return false;
+  }
+}
+
+export function marcarAssociacaoBibliotecaPendenteEscolha(userId: string): void {
+  try {
+    sessionStorage.setItem(STORAGE_LIBRARY_BIND_PENDING, userId);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function limparMarcadorAssociacaoBibliotecaPendente(): void {
+  try {
+    sessionStorage.removeItem(STORAGE_LIBRARY_BIND_PENDING);
+  } catch {
+    /* ignore */
   }
 }
 

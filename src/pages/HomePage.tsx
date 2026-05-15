@@ -1,8 +1,7 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
-import { useNavigate } from 'react-router-dom';
-
 import { DisciplinaCard } from '../components/DisciplinaCard';
+import { HomeHeaderMenu } from '../components/HomeHeaderMenu';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import type { Disciplina, ResultadoImportacao } from '../types';
@@ -36,7 +35,6 @@ export function HomePage({
   onExportarDisciplina,
   onImportarArquivo,
 }: HomePageProps) {
-  const navigate = useNavigate();
   const { user, loading: authLoading, logout } = useAuth();
   const [nomeDisciplina, setNomeDisciplina] = useState('');
   const [erro, setErro] = useState('');
@@ -88,70 +86,21 @@ export function HomePage({
 
   return (
     <Layout
-      titulo="Monte seu ambiente de estudo"
-      subtitulo="Crie disciplinas, cole o texto bruto da prova e deixe o parser estruturar tudo para estudar no navegador."
+      titulo="Painel"
+      omitirEyebrow
+      subtitulo="Crie disciplinas, importe texto ou JSON das provas e estude por disciplina ou com SRS. Com conta (opcional), a biblioteca sincroniza entre dispositivos."
+      classNameHeroAcoes="hero__actions--compact-toolbar"
       acoes={
-        <div className="hero__action-groups">
-          <div className="hero__action-group">
-            <span className="hero__action-label muted">Backup</span>
-            <div className="hero__action-buttons">
-              <button type="button" className="button button--secondary" onClick={handleAbrirImportacao}>
-                Importar JSON
-              </button>
-              <button
-                type="button"
-                className="button"
-                onClick={onExportarTudo}
-                disabled={disciplinas.length === 0}
-              >
-                Exportar tudo
-              </button>
-            </div>
-          </div>
-          <div className="hero__action-group">
-            <span className="hero__action-label muted">Gestão</span>
-            <div className="hero__action-buttons">
-              <button type="button" className="button button--secondary" onClick={onAbrirDesempenho}>
-                Desempenho
-              </button>
-              <button type="button" className="button button--secondary" onClick={onAbrirTesteIa}>
-                Testar IA
-              </button>
-            </div>
-          </div>
-          <div className="hero__action-group">
-            <span className="hero__action-label muted">Conta</span>
-            <div className="hero__action-buttons">
-              {authLoading ? null : user ? (
-                <>
-                  <span className="muted" style={{ alignSelf: 'center', fontSize: '0.9rem' }}>
-                    {user.email}
-                  </span>
-                  <button
-                    type="button"
-                    className="button button--secondary"
-                    onClick={() => void logout()}
-                  >
-                    Sair
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="button button--secondary"
-                    onClick={() => navigate('/login')}
-                  >
-                    Entrar
-                  </button>
-                  <button type="button" className="button" onClick={() => navigate('/registo')}>
-                    Registar
-                  </button>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
+        <HomeHeaderMenu
+          authLoading={authLoading}
+          disciplinasLength={disciplinas.length}
+          userEmail={user?.email}
+          onAbrirImportacao={handleAbrirImportacao}
+          onExportarTudo={onExportarTudo}
+          onAbrirDesempenho={onAbrirDesempenho}
+          onAbrirTesteIa={onAbrirTesteIa}
+          onLogout={() => logout()}
+        />
       }
     >
       <input

@@ -187,6 +187,7 @@ button {
   align-items: flex-start;
   margin-bottom: 32px;
   min-width: 0;
+  overflow: visible;
 }
 
 .hero > div:first-of-type {
@@ -221,6 +222,112 @@ button {
   flex-wrap: wrap;
   min-width: 0;
   flex-shrink: 0;
+}
+
+.hero__actions--compact-toolbar {
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  overflow: visible;
+}
+
+.home-header-menu {
+  position: relative;
+  overflow: visible;
+}
+
+.home-header-menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 46px;
+  padding-inline: 14px;
+}
+
+.home-header-menu__trigger-label {
+  font-weight: 600;
+}
+
+@media (max-width: 380px) {
+  .home-header-menu__trigger-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    border: 0;
+    white-space: nowrap;
+  }
+}
+
+.home-header-menu__painel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: min(320px, calc(100vw - 48px));
+  z-index: 50;
+  margin: 0;
+  padding: 16px 18px;
+  box-shadow:
+    0 12px 40px rgb(15 23 42 / 0.12),
+    0 4px 12px rgb(15 23 42 / 0.08);
+}
+
+[data-theme='dark'] .home-header-menu__painel {
+  box-shadow:
+    0 12px 40px rgb(0 0 0 / 0.45),
+    0 4px 12px rgb(0 0 0 / 0.25);
+}
+
+.home-header-menu__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home-header-menu__secao {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-header-menu__secao--conta .home-header-menu__email {
+  margin: -2px 0 6px;
+  font-size: 0.82rem;
+  line-height: 1.35;
+  word-break: break-all;
+  max-height: 2.7rem;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.home-header-menu__rotulo {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.home-header-menu__acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-header-menu__item {
+  width: 100%;
+  justify-content: flex-start;
+  gap: 10px;
+  white-space: normal;
+  text-align: left;
+  min-height: 44px;
+  height: auto;
 }
 
 .hero__action-groups {
@@ -287,6 +394,14 @@ button {
   backdrop-filter: blur(8px);
   min-width: 0;
   max-width: 100%;
+}
+
+/* Painel do menu: o pai (.home-header-menu) só tem a largura do botão; sem isto
+   `max-width: 100%` do .card encolhe o dropdown ao tamanho do trigger. */
+.home-header-menu__painel.card {
+  width: min(320px, calc(100vw - 32px));
+  max-width: min(320px, calc(100vw - 32px));
+  box-sizing: border-box;
 }
 
 .content-section {
@@ -1123,8 +1238,19 @@ select.select-input {
     width: 100%;
   }
 
+  .hero__actions.hero__actions--compact-toolbar {
+    flex-direction: row;
+    align-items: center;
+    width: auto;
+    align-self: flex-end;
+  }
+
   .hero__actions .theme-toggle {
     align-self: flex-end;
+  }
+
+  .hero__actions--compact-toolbar .theme-toggle {
+    align-self: center;
   }
 
   .hero__action-groups {
@@ -1467,4 +1593,55 @@ select.select-input {
   gap: 10px;
   justify-content: flex-end;
   margin-top: 2px;
+}
+
+.library-associate-dialog {
+  max-width: min(480px, calc(100vw - 48px));
+}
+
+.library-associate-dialog__body {
+  display: grid;
+  gap: 0;
+}
+
+.library-associate-dialog__body p {
+  margin: 0;
+}
+
+.library-associate-dialog__body p + p {
+  margin-top: 12px;
+}
+
+.library-associate-dialog__hint {
+  margin-top: 12px;
+  font-size: 0.9rem;
+}
+
+.library-associate-dialog__hint strong {
+  color: var(--text-primary);
+}
+
+.library-associate-dialog__body strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.library-associate-dialog .confirm-dialog-description {
+  color: var(--text-primary);
+}
+
+.library-associate-dialog__erro {
+  margin-top: 14px;
+}
+
+@media (max-width: 520px) {
+  .library-associate-dialog__actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+
+  .library-associate-dialog__actions .button {
+    width: 100%;
+    justify-content: center;
+  }
 }
