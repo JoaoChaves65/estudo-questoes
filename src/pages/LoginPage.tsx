@@ -32,7 +32,7 @@ export function LoginPage() {
         error?: string;
       };
       if (!r.ok) {
-        setErro(data.error ?? 'Não foi possível iniciar sessão.');
+        setErro(data.error ?? 'Não foi possível entrar.');
         return;
       }
       if (data.user?.id && data.user.email) {
@@ -49,7 +49,7 @@ export function LoginPage() {
   return (
     <Layout
       titulo="Entrar"
-      subtitulo="Inicie sessão com e-mail ou nome de utilizador (a biblioteca e o chat IA sincronizam na nuvem com sessão)."
+      subtitulo="Entre com e-mail ou nome de usuário. Logado(a), biblioteca e chat de IA sincronizam na nuvem."
       acoes={
         <Link to="/" className="button button--secondary">
           Início
@@ -58,7 +58,7 @@ export function LoginPage() {
     >
       <section className="card stack-form">
         <form className="stack-form" onSubmit={handleSubmit}>
-          <label htmlFor="login-ident">E-mail ou nome de utilizador</label>
+          <label htmlFor="login-ident">E-mail ou nome de usuário</label>
           <input
             id="login-ident"
             type="text"
@@ -81,12 +81,12 @@ export function LoginPage() {
           />
           {erro ? <p className="error-text">{erro}</p> : null}
           <button type="submit" className="button" disabled={pending}>
-            {pending ? 'A entrar…' : 'Entrar'}
+            {pending ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
         <p className="muted" style={{ margin: 0 }}>
           Ainda não tem conta?{' '}
-          <Link to="/registo">Registar</Link>
+          <Link to="/registo">Cadastrar-se</Link>
         </p>
       </section>
     </Layout>

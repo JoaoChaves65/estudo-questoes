@@ -59,13 +59,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .returning({ id: schema.users.id });
 
     if (!user) {
-      res.status(500).json({ error: 'Erro ao criar utilizador.' });
+      res.status(500).json({ error: 'Erro ao criar a conta.' });
       return;
     }
 
     await createSession(res, req, user.id);
     res.status(201).json({ user: { id: user.id, email: identifier } });
   } catch {
-    res.status(409).json({ error: 'Este e-mail ou nome de utilizador já está registado.' });
+    res.status(409).json({ error: 'Este e-mail ou nome de usuário já está cadastrado.' });
   }
 }

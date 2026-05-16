@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react';
 
 import { useNavigate } from 'react-router-dom';
 
@@ -11,6 +11,7 @@ import {
   getGeminiChatModelMeta,
   type GeminiChatAllowedModelId,
 } from '../constants/geminiChatModels';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
 import {
@@ -29,9 +30,9 @@ const ANSWER_MODE_STORAGE_KEY = 'estudo-questoes:gemini-chat-answer-mode';
 const RECENT_CONTEXT_MESSAGE_LIMIT = 8;
 
 const ANSWER_MODE_OPTIONS: AppSelectOption[] = [
-  { value: 'curta', label: 'Resposta curta — economiza mais tokens' },
-  { value: 'normal', label: 'Resposta normal — equilíbrio' },
-  { value: 'detalhada', label: 'Resposta detalhada — usa mais tokens' },
+  { value: 'curta', label: 'Curta' },
+  { value: 'normal', label: 'Normal' },
+  { value: 'detalhada', label: 'Detalhada' },
 ];
 
 function readStoredModelId(): GeminiChatAllowedModelId {
@@ -79,6 +80,14 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
   const [modeloId, setModeloId] = useState<GeminiChatAllowedModelId>(() => readStoredModelId());
   const [answerMode, setAnswerMode] = useState<ChatGeminiAnswerMode>(() => readStoredAnswerMode());
   const [modalInfoAberto, setModalInfoAberto] = useState(false);
+  const [painelAjudaPaginaAberto, setPainelAjudaPaginaAberto] = useState(true);
+  const [confirmarLimparAberto, setConfirmarLimparAberto] = useState(false);
+  const [confirmarSairAberto, setConfirmarSairAberto] = useState(false);
+  const [limpandoHistoricoIa, setLimpandoHistoricoIa] = useState(false);
+  const [saindoConta, setSaindoConta] = useState(false);
+
+  const rolagemListaRef = useRef<HTMLDivElement>(null);
+  const fimListaRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -95,6 +104,19 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
       /* ignore */
     }
   }, [answerMode]);
+
+  useEffect(() => {
+    const el = rolagemListaRef.current;
+    if (!el) {
+      return;
+    }
+    const fim = fimListaRef.current;
+    if (!fim) {
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    fim.scrollIntoView({ behavior: messages.length <= 2 ? 'auto' : 'smooth', block: 'end' });
+  }, [messages, carregando]);
 
   useEffect(() => {
     if (authLoading || !user) {
@@ -129,11 +151,9 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
   const metaSelecionado = useMemo(() => getGeminiChatModelMeta(modeloId), [modeloId]);
 
   const subtituloPagina = useMemo(() => {
-    const base = 'Chamada experimental ao Gemini pela rota /api/chat (chave só no servidor).';
-    if (user) {
-      return `${base} Com sessão iniciada, o histórico desta página guarda‑se na sua conta entre dispositivos.`;
-    }
-    return `${base} Sem conta, o histórico fica só neste navegador até recarregar ou limpar a conversa.`;
+    return user
+      ? `Histórico desta conversa salvo na sua conta (${user.email}).`
+      : 'Histórico só neste navegador — limpar a conversa ou os dados do site apaga esse histórico.';
   }, [user]);
 
   const opcoesModelo = useMemo<AppSelectOption[]>(
@@ -198,47 +218,66 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
     }
   };
 
-  const handleClearChat = async () => {
-    if (carregando) {
+  const executarLimparConversaConfirmado = async () => {
+    if (carregando || limpandoHistoricoIa) {
       return;
     }
-    if (user) {
-      try {
-        await clearIaConversationOnServer();
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : 'Erro ao limpar a conversa no servidor.');
-        return;
-      }
-    }
-    setMessages([]);
+    setLimpandoHistoricoIa(true);
     setErro('');
+    try {
+      if (user) {
+        await clearIaConversationOnServer();
+      }
+      setMessages([]);
+      setConfirmarLimparAberto(false);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Erro ao limpar a conversa no servidor.');
+    } finally {
+      setLimpandoHistoricoIa(false);
+    }
+  };
+
+  const executarLogoutConfirmado = async () => {
+    if (saindoConta) {
+      return;
+    }
+    setSaindoConta(true);
+    try {
+      await logout();
+      setConfirmarSairAberto(false);
+    } finally {
+      setSaindoConta(false);
+    }
+  };
+
+  const tituloAjudaCurtaPorModo: Record<string, string> = {
+    curta: 'Resposta mais curta; economiza mais tokens.',
+    normal: 'Tamanho equilibrado da resposta.',
+    detalhada: 'Resposta mais extensa; gasta mais tokens.',
   };
 
   return (
     <Layout
-      titulo="Teste da IA"
+      titulo="IA · Gemini"
+      omitirEyebrow
+      classNameHeroAcoes="hero__actions--compact-toolbar hero__actions--ia-chat-toolbar"
       subtitulo={subtituloPagina}
       acoes={
-        <div className="hero__action-buttons" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="hero__action-buttons ia-hero-actions">
           {!authLoading && user ? (
-            <>
-              <span className="muted" style={{ alignSelf: 'center', fontSize: '0.9rem' }}>
-                {user.email}
-              </span>
-              <button
-                type="button"
-                className="button button--secondary"
-                onClick={() => void logout()}
-                disabled={carregando}
-              >
-                Sair
-              </button>
-            </>
+            <button
+              type="button"
+              className="button button--secondary ia-hero-action-btn"
+              onClick={() => setConfirmarSairAberto(true)}
+              disabled={carregando || limpandoHistoricoIa}
+            >
+              Sair
+            </button>
           ) : !authLoading ? (
             <>
               <button
                 type="button"
-                className="button button--secondary"
+                className="button button--secondary ia-hero-action-btn"
                 onClick={() => navigate('/login')}
                 disabled={carregando}
               >
@@ -246,127 +285,242 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
               </button>
               <button
                 type="button"
-                className="button"
+                className="button ia-hero-action-btn"
                 onClick={() => navigate('/registo')}
                 disabled={carregando}
               >
-                Registar
+                Cadastrar
               </button>
             </>
           ) : null}
-          <button type="button" className="button button--secondary" onClick={onVoltar}>
+          <button type="button" className="button button--secondary ia-hero-action-btn" onClick={onVoltar}>
             Voltar
           </button>
         </div>
       }
     >
-      <section className="card">
-        <div className="ia-model-controls">
-          <div className="desempenho-field ia-model-field ia-model-field--model">
-            <div className="ia-model-heading">
-              <label htmlFor="ia-modelo" className="desempenho-field__label">
-                Modelo
-              </label>
+      <section className="card ia-chat-page-card">
+        <details
+          className="ia-chat-informativo"
+          open={painelAjudaPaginaAberto}
+          onToggle={(e) => setPainelAjudaPaginaAberto(e.currentTarget.open)}
+        >
+          <summary className="ia-chat-informativo__summary">
+            Como funcionam modelo, modo e o contexto desta página
+          </summary>
+          <div className="ia-chat-informativo__corpo muted">
+            <p className="ia-chat-informativo__graf">
+              A lista pode mostrar bem mais linhas do que entram na próxima resposta do modelo.
+              São reenviadas só as{' '}
+              <strong>
+                últimas {RECENT_CONTEXT_MESSAGE_LIMIT} mensagens já trocadas aqui — cada texto seu conta 1 e cada resposta da
+                Gemini conta 1, na ordem do histórico
+              </strong>
+              . Dentro desses {RECENT_CONTEXT_MESSAGE_LIMIT} lugares você pode ver só suas falas (se mandou várias seguidas),
+              só da IA ou ambas alternando — ex.: 4 perguntas + 4 respostas quando a conversa ficou assim no fim da lista.
+              Trechos mais velhos continuam visíveis para leitura, mas saem temporariamente do contexto até voltarem dentro
+              dessa última fatia quando você avançar a troca ou até escolher <strong>Limpar conversa</strong> no rodapé.
+            </p>
+            <ul className="ia-chat-informativo__lista">
+              <li>
+                <strong>Modelo</strong> — Qual variante Gemini responde; o ícone de ajuda ao lado do seletor mostra texto
+                sobre esse modelo.
+              </li>
+              <li>
+                <strong>Modo Curta</strong> — {tituloAjudaCurtaPorModo.curta}
+              </li>
+              <li>
+                <strong>Modo Normal</strong> — {tituloAjudaCurtaPorModo.normal}
+              </li>
+              <li>
+                <strong>Modo Detalhada</strong> — {tituloAjudaCurtaPorModo.detalhada}
+              </li>
+              <li>
+                <strong>Limpar conversa</strong> — Apaga esta conversa com confirmação. Logado(a), remove também a cópia na
+                nuvem; sem login, apenas neste navegador (como no texto do topo).
+              </li>
+            </ul>
+          </div>
+        </details>
+
+        <div className="ia-chat-shell">
+          <div
+            ref={rolagemListaRef}
+            className="ia-chat-thread"
+            role="log"
+            aria-relevant="additions"
+            aria-label="Histórico da conversa"
+          >
+            {messages.length === 0 ? (
+              <div className="ia-chat-thread__empty muted">
+                <p className="ia-chat-thread__empty-title">Digite uma pergunta abaixo para começar.</p>
+                <p className="ia-chat-thread__empty-hint">
+                  Digite na caixa de baixo. Modelo e modo estão nos controles; o resumo de contexto ficou logo acima.
+                </p>
+              </div>
+            ) : (
+              <div className="ia-chat-messages ia-chat-messages--thread">
+                {messages.map((message) => (
+                  <article
+                    key={message.id}
+                    className={`ia-chat-message ia-chat-message--${message.role}`}
+                  >
+                    <div className="ia-chat-message__meta">
+                      <strong>{message.role === 'user' ? 'Você' : 'Gemini'}</strong>
+                      {message.model ? <span className="ia-chat-msg-model">{message.model}</span> : null}
+                    </div>
+                    <pre className="ia-chat-message__content">{message.content}</pre>
+                  </article>
+                ))}
+                {carregando ? (
+                  <p className="muted ia-chat-typing-indicator" aria-live="polite">
+                    …
+                  </p>
+                ) : null}
+                <div ref={fimListaRef} aria-hidden />
+              </div>
+            )}
+          </div>
+
+          <div className="ia-chat-composer">
+            <div className="ia-composer-toolbar" aria-label="Modelo e tamanho da resposta">
+              <div className="ia-toolbar-field ia-toolbar-field--model">
+                <span className="ia-toolbar-chip-label" title="Modelo Gemini">
+                  Modelo
+                </span>
+                <div className="ia-toolbar-control">
+                  <AppSelect
+                    id="ia-modelo"
+                    value={modeloId}
+                    options={opcoesModelo}
+                    onChange={(v) => setModeloId(v as GeminiChatAllowedModelId)}
+                    listaAriaLabel="Modelos Gemini disponíveis"
+                    className="ia-model-app-select ia-model-app-select--compact"
+                    disabled={carregando}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="button button--secondary ia-toolbar-icon-btn"
+                  onClick={() => setModalInfoAberto(true)}
+                  disabled={carregando}
+                  aria-label="Ajuda sobre o modelo selecionado"
+                  title="Informação do modelo"
+                >
+                  <CircleHelp size={16} aria-hidden />
+                </button>
+              </div>
+              <div className="ia-toolbar-field ia-toolbar-field--answer">
+                <span
+                  className="ia-toolbar-chip-label"
+                  title={tituloAjudaCurtaPorModo[answerMode] ?? 'Tamanho da resposta'}
+                >
+                  Modo
+                </span>
+                <div className="ia-toolbar-control">
+                  <AppSelect
+                    id="ia-answer-mode"
+                    value={answerMode}
+                    options={ANSWER_MODE_OPTIONS}
+                    onChange={(v) => setAnswerMode(v as ChatGeminiAnswerMode)}
+                    listaAriaLabel="Tamanho da resposta da IA"
+                    className="ia-model-app-select ia-model-app-select--compact"
+                    disabled={carregando}
+                  />
+                </div>
+              </div>
               <button
                 type="button"
-                className="button button--secondary ia-model-info-btn"
-                onClick={() => setModalInfoAberto(true)}
-                disabled={carregando}
-                aria-label="Informações sobre o modelo selecionado"
-                title="Informações sobre o modelo"
+                className="button button--secondary ia-composer-clear"
+                onClick={() => setConfirmarLimparAberto(true)}
+                disabled={carregando || limpandoHistoricoIa || messages.length === 0}
+                title="Limpar histórico (confirme antes)."
               >
-                <CircleHelp size={18} aria-hidden />
+                Limpar conversa
               </button>
             </div>
-            <AppSelect
-              id="ia-modelo"
-              value={modeloId}
-              options={opcoesModelo}
-              onChange={(v) => setModeloId(v as GeminiChatAllowedModelId)}
-              listaAriaLabel="Modelos Gemini disponíveis"
-              className="ia-model-app-select"
-              disabled={carregando}
-            />
+
+            <form className="ia-composer-form" onSubmit={handleSubmit}>
+              <label htmlFor="ia-prompt" className="ia-composer-label visually-hidden">
+                Mensagem para o Gemini
+              </label>
+              <textarea
+                id="ia-prompt"
+                className="textarea-input ia-composer-input"
+                rows={3}
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Pergunta ou instrução…"
+                disabled={carregando}
+              />
+              {erro ? <p className="error-text ia-composer-erro">{erro}</p> : null}
+              <div className="ia-composer-actions">
+                <p className="muted ia-composer-footnote">
+                  Este pedido só reaproveita as últimas {RECENT_CONTEXT_MESSAGE_LIMIT} mensagens como contexto (resumo logo acima).
+                </p>
+                <button type="submit" className="button" disabled={carregando || !prompt.trim()}>
+                  {carregando ? 'Enviando…' : 'Enviar'}
+                </button>
+              </div>
+            </form>
           </div>
-
-          <div className="desempenho-field ia-model-field ia-model-field--answer-mode">
-            <label htmlFor="ia-answer-mode" className="desempenho-field__label">
-              Tamanho da resposta
-            </label>
-            <AppSelect
-              id="ia-answer-mode"
-              value={answerMode}
-              options={ANSWER_MODE_OPTIONS}
-              onChange={(v) => setAnswerMode(v as ChatGeminiAnswerMode)}
-              listaAriaLabel="Níveis de detalhe da resposta"
-              className="ia-model-app-select"
-              disabled={carregando}
-            />
-          </div>
-        </div>
-
-        <form className="stack-form" onSubmit={handleSubmit}>
-          <label htmlFor="ia-prompt">Pergunta ou texto para o modelo</label>
-          <textarea
-            id="ia-prompt"
-            className="textarea-input textarea-input--compact"
-            rows={5}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            placeholder="Ex.: Explique em 3 frases o que é habeas corpus."
-            disabled={carregando}
-          />
-          {erro ? <p className="error-text">{erro}</p> : null}
-          <button type="submit" className="button" disabled={carregando || !prompt.trim()}>
-            {carregando ? 'A enviar…' : 'Enviar'}
-          </button>
-        </form>
-
-        <div className="ia-chat-context-note">
-          <p>
-            A IA usa só as últimas {RECENT_CONTEXT_MESSAGE_LIMIT} mensagens como contexto para
-            economizar tokens.
-          </p>
-          <button
-            type="button"
-            className="button button--secondary"
-            onClick={() => void handleClearChat()}
-            disabled={carregando || messages.length === 0}
-            title="Apaga o histórico usado como contexto. Ajuda a economizar tokens quando mudar de assunto."
-          >
-            Limpar conversa
-          </button>
         </div>
       </section>
 
-      {messages.length ? (
-        <section className="card ia-chat-history">
-          <div className="ia-chat-history__header">
-            <h2>Conversa</h2>
-            <p className="muted">
-              Limpar conversa apaga o contexto atual; a próxima pergunta começa do zero.
+      <ConfirmDialog
+        open={confirmarLimparAberto}
+        title="Limpar esta conversa?"
+        description={
+          user ? (
+            <>
+              <p className="ia-dialog-limpar-conversa-intro">
+                O histórico desta página some da <strong>sua conta na nuvem</strong> e deste navegador.{' '}
+                Não há como desfazer isso automaticamente.
+              </p>
+              <p className="ia-dialog-limpar-conversa-fim">Quer continuar?</p>
+            </>
+          ) : (
+            <>
+              <p className="ia-dialog-limpar-conversa-intro">
+                Todas as mensagens desta sessão são apagadas <strong>só neste navegador</strong>.
+              </p>
+              <p className="ia-dialog-limpar-conversa-fim">Quer continuar?</p>
+            </>
+          )
+        }
+        confirmLabel={limpandoHistoricoIa ? 'Limpando…' : 'Limpar'}
+        cancelLabel="Cancelar"
+        destructive
+        dialogBusy={limpandoHistoricoIa}
+        onCancel={() => {
+          if (!limpandoHistoricoIa) {
+            setConfirmarLimparAberto(false);
+          }
+        }}
+        onConfirm={() => void executarLimparConversaConfirmado()}
+      />
+
+      <ConfirmDialog
+        open={confirmarSairAberto}
+        title="Sair da conta?"
+        description={
+          <>
+            <p className="ia-dialog-limpar-conversa-intro">
+              Para biblioteca e chat IA voltarem a sincronizar na nuvem, será preciso entrar de novo neste navegador.
             </p>
-          </div>
-          <div className="ia-chat-messages">
-            {messages.map((message) => (
-              <article
-                key={message.id}
-                className={`ia-chat-message ia-chat-message--${message.role}`}
-              >
-                <div className="ia-chat-message__meta">
-                  <strong>{message.role === 'user' ? 'Você' : 'IA'}</strong>
-                  {message.model ? (
-                    <span>
-                      Modelo: <code>{message.model}</code>
-                    </span>
-                  ) : null}
-                </div>
-                <pre className="ia-chat-message__content">{message.content}</pre>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+            <p className="ia-dialog-limpar-conversa-fim">Quer sair mesmo?</p>
+          </>
+        }
+        confirmLabel={saindoConta ? 'Saindo…' : 'Sair'}
+        cancelLabel="Cancelar"
+        dialogBusy={saindoConta}
+        onCancel={() => {
+          if (!saindoConta) {
+            setConfirmarSairAberto(false);
+          }
+        }}
+        onConfirm={() => void executarLogoutConfirmado()}
+      />
 
       {modalInfoAberto && metaSelecionado ? (
         <div className="confirm-dialog-overlay" role="presentation">
@@ -385,10 +539,8 @@ export function IaTestPage({ onVoltar }: IaTestPageProps) {
             <h2 id="ia-model-info-title" className="confirm-dialog-title">
               {metaSelecionado.label}
             </h2>
-            <p className="confirm-dialog-description ia-model-modal-destaque" style={{ margin: '0 0 12px' }}>
-              {metaSelecionado.destaque}
-            </p>
-            <p className="confirm-dialog-description" style={{ margin: 0, lineHeight: 1.55 }}>
+            <p className="confirm-dialog-description ia-model-modal-destaque">{metaSelecionado.destaque}</p>
+            <p className="confirm-dialog-description" style={{ margin: '0 0 8px', lineHeight: 1.55 }}>
               {metaSelecionado.texto}
             </p>
             <div className="confirm-dialog-actions">

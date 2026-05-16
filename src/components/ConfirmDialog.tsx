@@ -7,8 +7,10 @@ type ConfirmDialogProps = {
   description: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
-  /** botão principal vermelho (exclusões) */
+  /** Botão principal em estilo perigoso (ex.: exclusões). */
   destructive?: boolean;
+  /** Desativa os dois botões (ex.: enquanto um pedido assíncrono corre). */
+  dialogBusy?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -20,6 +22,7 @@ export function ConfirmDialog({
   confirmLabel = 'Confirmar',
   cancelLabel = 'Cancelar',
   destructive = false,
+  dialogBusy = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
@@ -34,12 +37,14 @@ export function ConfirmDialog({
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') {
         e.preventDefault();
-        onCancel();
+        if (!dialogBusy) {
+          onCancel();
+        }
       }
     }
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [open, onCancel]);
+  }, [open, onCancel, dialogBusy]);
 
   useEffect(() => {
     if (!open) {
@@ -67,8 +72,13 @@ export function ConfirmDialog({
       <button
         type="button"
         className="confirm-dialog-backdrop"
-        aria-label="Fechar diálogo"
-        onClick={onCancel}
+        aria-label={dialogBusy ? undefined : 'Fechar diálogo'}
+        aria-disabled={dialogBusy}
+        onClick={() => {
+          if (!dialogBusy) {
+            onCancel();
+          }
+        }}
       />
       <div
         role="dialog"
@@ -84,7 +94,12 @@ export function ConfirmDialog({
           {description}
         </div>
         <div className="confirm-dialog-actions">
-          <button type="button" className="button button--secondary" onClick={onCancel}>
+          <button
+            type="button"
+            className="button button--secondary"
+            onClick={onCancel}
+            disabled={dialogBusy}
+          >
             {cancelLabel}
           </button>
           <button
@@ -92,6 +107,7 @@ export function ConfirmDialog({
             type="button"
             className={`button${destructive ? ' button--danger' : ''}`}
             onClick={onConfirm}
+            disabled={dialogBusy}
           >
             {confirmLabel}
           </button>

@@ -5,7 +5,7 @@ export type VarianteAssociacaoBiblioteca = 'nuvem-vazia' | 'nuvem-com-dados';
 
 type StudyLibraryAssociateDialogProps = {
   open: boolean;
-  /** Email da conta com sessão já criada ou recém registada */
+  /** Email da conta com sessão já criada ou recém criada */
   contaEmail: string;
   variant: VarianteAssociacaoBiblioteca;
   ocupado: boolean;
@@ -13,7 +13,7 @@ type StudyLibraryAssociateDialogProps = {
   /** Descrição opcional antes dos botões (ex.: erro de rede) */
   children?: ReactNode;
   aoAssociar: () => void;
-  /** Conta só da outra pessoa / não quero fundir neste equipamento */
+  /** Conta só da outra pessoa / não quero mesclar neste equipamento */
   aoNaoAssociar: () => void;
 };
 
@@ -71,39 +71,41 @@ export function StudyLibraryAssociateDialog({
     variant === 'nuvem-vazia' ? (
       <>
         <p>
-          Acabaste de entrar como <strong>{contaEmail}</strong>. Como <strong>convidado(a)</strong> já tinhas
-          coisas guardadas só neste navegador — queres <strong>subir esse trabalho para esta conta na nuvem</strong>{' '}
-          (equivale ao backup que exportarias em JSON, mas direto para a conta)?
+          Você acabou de entrar como <strong>{contaEmail}</strong>. Como{' '}
+          <strong>visitante(a)</strong>, você já tinha conteúdo guardado só neste navegador — quer{' '}
+          <strong>enviar esse trabalho para esta conta na nuvem</strong> (equivalente ao backup em JSON
+          que você exportaria, só que direto na conta)?
         </p>
         <p>
-          Se estás a usar <strong>só este PC para criar conta de outra pessoa</strong>, escolhe «Não»: apaga‑se só
-          o que está neste dispositivo para essa conta continuar limpa lá em cima.
+          Se <strong>só vai usar este computador para criar a conta de outra pessoa</strong>, escolha
+          «Não»: apagamos só o que está neste dispositivo para a conta nova continuar limpa na nuvem.
         </p>
         <p className="library-associate-dialog__hint muted">
-          Para teres uma cópia teu lado antes de decidir: no menu usa <strong>Exportar tudo</strong>.
+          Para guardar uma cópia antes de decidir, no menu use <strong>Exportar tudo</strong>.
         </p>
       </>
     ) : (
       <>
         <p>
-          Estás ligado como <strong>{contaEmail}</strong>. Este navegador tem dados{' '}
-          <strong>e a tua conta</strong> também já tem biblioteca na nuvem (outra sessão ou dispositivo).
+          Você está logado como <strong>{contaEmail}</strong>. Este navegador tem dados{' '}
+          <strong>e sua conta</strong> também já tem biblioteca na nuvem (outra sessão ou dispositivo).
         </p>
         <p>
-          Queres <strong>fundir</strong> navegador + nuvem (em conflito de mesmo ID prevalece a nuvem), ou{' '}
-          <strong>ignorar o que só está aqui</strong> e ficar apenas com os dados já na conta?
+          Quer <strong>mesclar</strong> o que está aqui com a nuvem (em conflito com o mesmo ID,
+          prevalece a nuvem), ou <strong>ignorar o que só está aqui</strong> e ficar apenas com os dados já
+          na conta?
         </p>
       </>
     );
 
   const labelSim =
     variant === 'nuvem-vazia'
-      ? 'Sim — subir para esta conta'
-      : 'Sim — fundir navegador com a nuvem';
+      ? 'Sim — enviar para esta conta'
+      : 'Sim — mesclar navegador com a nuvem';
   const labelNao =
     variant === 'nuvem-vazia'
       ? 'Não — não usar estes dados (conta nova limpa)'
-      : 'Não — só nuvem, descarto o extra local';
+      : 'Não — manter só a nuvem';
 
   return createPortal(
     <div className="confirm-dialog-overlay" role="presentation">
@@ -117,7 +119,7 @@ export function StudyLibraryAssociateDialog({
         className="confirm-dialog-panel card library-associate-dialog"
       >
         <h2 id={titleId} className="confirm-dialog-title">
-          Subir ou fundir dados?
+          Enviar ou mesclar dados?
         </h2>
         <div id={descId} className="confirm-dialog-description">
           <div className="library-associate-dialog__body muted">{textoPrincipal}</div>
@@ -138,12 +140,7 @@ export function StudyLibraryAssociateDialog({
           >
             {labelNao}
           </button>
-          <button
-            type="button"
-            className="button"
-            disabled={ocupado}
-            onClick={() => aoAssociar()}
-          >
+          <button type="button" className="button" disabled={ocupado} onClick={() => aoAssociar()}>
             {labelSim}
           </button>
         </div>

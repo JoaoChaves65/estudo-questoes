@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { LogIn, LogOut, Menu, Upload, Workflow } from 'lucide-react';
+import { LogIn, LogOut, Menu, Upload, UserPen, Workflow } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+
+import { ConfirmDialog } from './ConfirmDialog';
 
 type HomeHeaderMenuProps = {
   authLoading: boolean;
@@ -26,6 +28,8 @@ export function HomeHeaderMenu({
 }: HomeHeaderMenuProps) {
   const navigate = useNavigate();
   const [aberto, setAberto] = useState(false);
+  const [confirmarSairAberto, setConfirmarSairAberto] = useState(false);
+  const [saindoConta, setSaindoConta] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const fechar = useCallback(() => setAberto(false), []);
@@ -59,7 +63,21 @@ export function HomeHeaderMenu({
     return () => window.removeEventListener('keydown', aoTecla);
   }, [aberto, fechar]);
 
+  const executarLogoutConfirmado = async () => {
+    if (saindoConta) {
+      return;
+    }
+    setSaindoConta(true);
+    try {
+      await Promise.resolve(onLogout());
+      setConfirmarSairAberto(false);
+    } finally {
+      setSaindoConta(false);
+    }
+  };
+
   return (
+    <>
     <div className="home-header-menu" ref={rootRef}>
       <button
         type="button"
@@ -151,7 +169,18 @@ export function HomeHeaderMenu({
                       className="button button--secondary home-header-menu__item"
                       onClick={() => {
                         fechar();
-                        void onLogout();
+                        navigate('/conta');
+                      }}
+                    >
+                      <UserPen size={16} aria-hidden />
+                      Dados da conta
+                    </button>
+                    <button
+                      type="button"
+                      className="button button--secondary home-header-menu__item"
+                      onClick={() => {
+                        fechar();
+                        setConfirmarSairAberto(true);
                       }}
                     >
                       <LogOut size={16} aria-hidden />
@@ -179,7 +208,7 @@ export function HomeHeaderMenu({
                         navigate('/registo');
                       }}
                     >
-                      Registar
+                      Cadastrar
                     </button>
                   </div>
                 )}
@@ -189,5 +218,27 @@ export function HomeHeaderMenu({
         </div>
       ) : null}
     </div>
+    <ConfirmDialog
+      open={confirmarSairAberto}
+      title="Sair da conta?"
+      description={
+        <>
+          <p className="ia-dialog-limpar-conversa-intro">
+            Para biblioteca e chat IA voltarem a sincronizar na nuvem, será preciso entrar de novo neste navegador.
+          </p>
+          <p className="ia-dialog-limpar-conversa-fim">Quer sair mesmo?</p>
+        </>
+      }
+      confirmLabel={saindoConta ? 'Saindo…' : 'Sair'}
+      cancelLabel="Cancelar"
+      dialogBusy={saindoConta}
+      onCancel={() => {
+        if (!saindoConta) {
+          setConfirmarSairAberto(false);
+        }
+      }}
+      onConfirm={() => void executarLogoutConfirmado()}
+    />
+    </>
   );
 }

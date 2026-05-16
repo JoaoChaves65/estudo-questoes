@@ -108,7 +108,7 @@ export function HomePage({
         type="file"
         accept="application/json,.json"
         className="visually-hidden visually-hidden-file"
-        aria-label="Escolher ficheiro JSON para importação"
+        aria-label="Escolher arquivo JSON para importação"
         onChange={handleSelecionarArquivo}
       />
       <section className="card">

@@ -48,8 +48,8 @@ export function RegisterPage() {
 
   return (
     <Layout
-      titulo="Registo"
-      subtitulo="Crie conta com e-mail ou nome de utilizador (mínimo 3 caracteres) e senha (mínimo 8)."
+      titulo="Cadastro"
+      subtitulo="Crie uma conta com e-mail ou nome de usuário (mínimo de 3 caracteres) e senha (mínimo de 8)."
       acoes={
         <Link to="/" className="button button--secondary">
           Início
@@ -58,7 +58,7 @@ export function RegisterPage() {
     >
       <section className="card stack-form">
         <form className="stack-form" onSubmit={handleSubmit}>
-          <label htmlFor="reg-ident">E-mail ou nome de utilizador</label>
+          <label htmlFor="reg-ident">E-mail ou nome de usuário</label>
           <input
             id="reg-ident"
             type="text"
@@ -83,7 +83,7 @@ export function RegisterPage() {
           />
           {erro ? <p className="error-text">{erro}</p> : null}
           <button type="submit" className="button" disabled={pending}>
-            {pending ? 'A registar…' : 'Registar'}
+            {pending ? 'Cadastrando…' : 'Cadastrar'}
           </button>
         </form>
         <p className="muted" style={{ margin: 0 }}>

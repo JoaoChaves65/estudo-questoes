@@ -10,14 +10,15 @@ import {
 
 import { StudyLibraryAssociateDialog } from './components/StudyLibraryAssociateDialog';
 import { ConfirmDialog } from './components/ConfirmDialog';
+import { AccountPage } from './pages/AccountPage';
 import { DesempenhoPage } from './pages/DesempenhoPage';
 import { HomePage } from './pages/HomePage';
 import { ImportPage } from './pages/ImportPage';
-import { ManageQuestionsPage } from './pages/ManageQuestionsPage';
-import { SrsStudyPage } from './pages/SrsStudyPage';
 import { IaTestPage } from './pages/IaTestPage';
 import { LoginPage } from './pages/LoginPage';
+import { ManageQuestionsPage } from './pages/ManageQuestionsPage';
 import { RegisterPage } from './pages/RegisterPage';
+import { SrsStudyPage } from './pages/SrsStudyPage';
 import { StudyPage } from './pages/StudyPage';
 import { useAuth } from './contexts/AuthContext';
 import { useDesempenhoStore } from './store/useDesempenhoStore';
@@ -531,6 +532,8 @@ export default function App() {
 
         <Route path="/ia" element={<IaTestPage onVoltar={aoHome} />} />
 
+        <Route path="/conta" element={<AccountPage />} />
+
         <Route path="/login" element={<LoginPage />} />
         <Route path="/registo" element={<RegisterPage />} />
 
@@ -561,7 +564,7 @@ export default function App() {
       <ConfirmDialog
         open={pwaAtualizacaoPendente}
         title="Nova versão disponível"
-        description="Existe uma atualização instalada que passa a valer quando a página é recarregada. Recarregar agora aplicará a nova versão."
+        description="Há uma atualização já instalada. Ao recarregar a página, você passa a usar a nova versão."
         confirmLabel="Recarregar"
         cancelLabel="Agora não"
         destructive={false}

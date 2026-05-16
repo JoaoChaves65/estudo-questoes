@@ -213,7 +213,7 @@ export function ManageQuestionsPage({
   return (
     <Layout
       titulo="Gerenciar questões"
-      subtitulo="Busque, revise duplicadas prováveis e apague questões ou disciplinas com segurança."
+      subtitulo="Busque trechos, revise possíveis duplicatas e exclua questões ou disciplinas com segurança."
       acoes={
         <button type="button" className="button button--secondary" onClick={onVoltar}>
           Voltar

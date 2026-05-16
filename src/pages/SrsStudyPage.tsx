@@ -138,7 +138,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
     return (
       <Layout
         titulo={`Estudo inteligente: ${disciplina.nome}`}
-        subtitulo="Importe questões para usar a fila inteligente."
+        subtitulo="Importe ou cadastre questões para usar a fila inteligente."
         acoes={null}
       >
         <section className="card empty-state">
