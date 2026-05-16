@@ -1433,7 +1433,7 @@ select.select-input {
     width: 100%;
     max-width: 100%;
     flex-wrap: nowrap;
-    justify-content: flex-start;
+    justify-content: flex-end;
     gap: 8px;
   }
 
@@ -1458,6 +1458,16 @@ select.select-input {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Gerenciar questões (só “Voltar”): não esticar o botão por toda a linha. */
+  .hero__actions--study-toolbar .study-hero-toolbar-buttons:has(> .button:only-child) {
+    flex: 0 1 auto;
+  }
+
+  .hero__actions--study-toolbar .study-hero-toolbar-buttons:has(> .button:only-child) .button {
+    flex: 0 1 auto;
+    min-width: 0;
   }
 
   .focus-topbar .study-focus-toolbar-buttons {

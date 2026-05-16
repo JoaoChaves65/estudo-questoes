@@ -214,10 +214,13 @@ export function ManageQuestionsPage({
     <Layout
       titulo="Gerenciar questões"
       subtitulo="Busque trechos, revise possíveis duplicatas e exclua questões ou disciplinas com segurança."
+      classNameHeroAcoes="hero__actions--compact-toolbar hero__actions--study-toolbar"
       acoes={
-        <button type="button" className="button button--secondary" onClick={onVoltar}>
-          Voltar
-        </button>
+        <div className="hero__action-buttons study-hero-toolbar-buttons">
+          <button type="button" className="button button--secondary" onClick={onVoltar}>
+            Voltar
+          </button>
+        </div>
       }
     >
       <section className="card manage-toolbar">
