@@ -155,9 +155,10 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
     <Layout
       titulo={`Estudo inteligente: ${disciplina.nome}`}
       subtitulo="Fila por repetição espaçada: acertos espaçam revisão; erros e puladas voltam mais cedo. Pular conta como erro na fila."
+      classNameHeroAcoes="hero__actions--compact-toolbar hero__actions--study-toolbar"
       compactHeader={
         modoFoco ? (
-          <>
+          <div className="study-focus-toolbar-buttons">
             <button type="button" className="button button--secondary" onClick={onVoltar}>
               Voltar
             </button>
@@ -168,12 +169,12 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
             >
               Sair do foco
             </button>
-          </>
+          </div>
         ) : undefined
       }
       acoes={
         modoFoco ? undefined : (
-          <>
+          <div className="hero__action-buttons study-hero-toolbar-buttons">
             <button
               type="button"
               className="button button--secondary"
@@ -184,7 +185,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
             <button type="button" className="button button--secondary" onClick={onVoltar}>
               Voltar
             </button>
-          </>
+          </div>
         )
       }
     >
@@ -318,7 +319,7 @@ export function SrsStudyPage({ disciplina, onVoltar }: SrsStudyPageProps) {
         questão&quot;.
       </p>
 
-      <section className="stats-grid">
+      <section className="stats-grid stats-grid--study-strip">
         <div className="card stat-card">
           <span
             className="muted"

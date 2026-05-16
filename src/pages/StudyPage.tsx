@@ -112,9 +112,10 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
     <Layout
       titulo={`Modo estudo: ${disciplina.nome}`}
       subtitulo="Questões e alternativas são embaralhadas a cada sessão. Ao responder, o feedback aparece imediatamente."
+      classNameHeroAcoes="hero__actions--compact-toolbar hero__actions--study-toolbar"
       compactHeader={
         modoFoco ? (
-          <>
+          <div className="study-focus-toolbar-buttons">
             <button type="button" className="button button--secondary" onClick={onVoltar}>
               Voltar
             </button>
@@ -125,12 +126,12 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
             >
               Sair do foco
             </button>
-          </>
+          </div>
         ) : undefined
       }
       acoes={
         modoFoco ? undefined : (
-          <>
+          <div className="hero__action-buttons study-hero-toolbar-buttons">
             <button
               type="button"
               className="button button--secondary"
@@ -141,12 +142,12 @@ export function StudyPage({ disciplina, onVoltar }: StudyPageProps) {
             <button type="button" className="button button--secondary" onClick={onVoltar}>
               Voltar
             </button>
-          </>
+          </div>
         )
       }
     >
       {!modoFoco ? (
-        <section className="stats-grid">
+        <section className="stats-grid stats-grid--study-strip">
           <div className="card stat-card">
             <span className="muted">Questões na sessão</span>
             <strong>{questoesSessao.length}</strong>

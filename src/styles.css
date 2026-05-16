@@ -1427,6 +1427,89 @@ select.select-input {
     text-overflow: ellipsis;
   }
 
+  /* Modo estudo: tema + Modo foco + Voltar numa linha (mobile). */
+  .hero__actions.hero__actions--compact-toolbar.hero__actions--study-toolbar {
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .hero__actions--study-toolbar .theme-toggle {
+    flex-shrink: 0;
+  }
+
+  .hero__actions--study-toolbar .hero__action-buttons.study-hero-toolbar-buttons {
+    flex: 1 1 0;
+    flex-wrap: nowrap;
+    gap: 6px;
+    min-width: 0;
+    width: auto;
+    max-width: 100%;
+  }
+
+  .hero__actions--study-toolbar .study-hero-toolbar-buttons .button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: clamp(0.72rem, 3.1vw, 0.8125rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .focus-topbar .study-focus-toolbar-buttons {
+    flex: 1 1 0;
+    display: flex;
+    min-width: 0;
+    gap: 6px;
+    justify-content: flex-end;
+  }
+
+  .focus-topbar .study-focus-toolbar-buttons .button {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 8px 6px;
+    font-size: clamp(0.72rem, 3.1vw, 0.875rem);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Estatísticas do modo estudo: quatro cartões numa linha no mobile. */
+  .stats-grid--study-strip {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .stats-grid--study-strip .stat-card {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 12px 6px;
+    gap: 6px;
+    justify-items: center;
+  }
+
+  .stats-grid--study-strip .stat-card .muted {
+    font-size: 0.62rem;
+    line-height: 1.2;
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  .stats-grid--study-strip .stat-card strong {
+    font-size: clamp(0.88rem, 3.6vw, 1.2rem);
+  }
+
   .hero__subtitle {
     font-size: 0.9rem;
     line-height: 1.45;
@@ -1508,7 +1591,7 @@ select.select-input {
     font-size: 0.85rem;
   }
 
-  .stats-grid {
+  .stats-grid:not(.stats-grid--study-strip) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
   }
@@ -1521,18 +1604,22 @@ select.select-input {
 }
 
 @media (max-width: 640px) {
-  .stats-grid {
+  .stats-grid:not(.stats-grid--study-strip) {
     grid-template-columns: 1fr;
   }
 }
 
 @media (max-width: 380px) {
-  .stats-grid {
+  .stats-grid:not(.stats-grid--study-strip) {
     grid-template-columns: 1fr;
   }
 
   .stat-card strong {
     font-size: 1.6rem;
+  }
+
+  .stats-grid--study-strip .stat-card strong {
+    font-size: clamp(0.8rem, 3.8vw, 1.05rem);
   }
 
   .desempenho-table {
