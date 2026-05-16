@@ -232,9 +232,121 @@ button {
   overflow: visible;
 }
 
+.hero__actions--compact-toolbar.hero__actions--with-leading {
+  justify-content: flex-start;
+  width: 100%;
+}
+
+.hero__actions-leading {
+  position: relative;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.hero__actions-trailing {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 .home-header-menu {
   position: relative;
   overflow: visible;
+}
+
+.home-guest-chip {
+  position: relative;
+  min-width: 0;
+}
+
+.home-guest-chip__summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  user-select: none;
+  padding: 8px 12px;
+  min-height: 40px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--surface-soft);
+  color: var(--text-secondary);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease;
+}
+
+.home-guest-chip__summary:hover {
+  border-color: var(--border-strong, var(--border-soft));
+  background: var(--surface-strong, var(--surface-soft));
+}
+
+.home-guest-chip__summary::-webkit-details-marker {
+  display: none;
+}
+
+.home-guest-chip__label {
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: min(240px, 46vw);
+}
+
+.home-guest-chip__chevron {
+  flex-shrink: 0;
+  opacity: 0.88;
+  transition: transform 0.2s ease;
+}
+
+.home-guest-chip[open] .home-guest-chip__chevron {
+  transform: rotate(180deg);
+}
+
+.home-guest-chip__painel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 45;
+  margin: 0;
+  padding: 12px 14px;
+  width: min(380px, calc(100vw - 40px));
+  border-radius: 14px;
+  border: 1px solid var(--border-medium);
+  /* Fundo bem mais cobrente que o vidro das cards; blur forte no fundo atrás */
+  background-color: var(--surface-strong);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  box-shadow:
+    0 16px 40px rgb(15 23 42 / 0.14),
+    0 4px 14px rgb(15 23 42 / 0.08);
+}
+
+[data-theme='dark'] .home-guest-chip__painel {
+  /* Quase sólido no tema escuro (evita o fundo aparecer borrado dentro do próprio vidro). */
+  background-color: color-mix(in srgb, rgb(30 41 59) 92%, rgb(15 23 42) 8%);
+  box-shadow:
+    0 18px 48px rgb(0 0 0 / 0.5),
+    0 6px 16px rgb(0 0 0 / 0.35);
+}
+
+[data-theme='light'] .home-guest-chip__painel {
+  background-color: color-mix(in srgb, var(--surface-alt) 88%, rgb(255 255 255) 12%);
+}
+
+.home-guest-chip__texto {
+  margin: 0 0 10px;
+  font-size: 0.8675rem;
+  line-height: 1.5;
+}
+
+.home-guest-chip__texto:last-child {
+  margin-bottom: 0;
 }
 
 .home-header-menu__trigger {
@@ -1250,6 +1362,20 @@ select.select-input {
   }
 
   .hero__actions--compact-toolbar .theme-toggle {
+    align-self: center;
+  }
+
+  .hero__actions.hero__actions--compact-toolbar.hero__actions--with-leading {
+    align-self: stretch;
+    width: 100%;
+    max-width: 100%;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 8px;
+  }
+
+  /* Evita ícone tema “subir”: barra inteira já centralizada. */
+  .hero__actions.hero__actions--compact-toolbar.hero__actions--with-leading .theme-toggle {
     align-self: center;
   }
 

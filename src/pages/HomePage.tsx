@@ -1,6 +1,7 @@
 import { useRef, useState, type ChangeEvent, type FormEvent } from 'react';
 
 import { DisciplinaCard } from '../components/DisciplinaCard';
+import { HomeGuestModeChip } from '../components/HomeGuestModeChip';
 import { HomeHeaderMenu } from '../components/HomeHeaderMenu';
 import { Layout } from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -90,6 +91,7 @@ export function HomePage({
       omitirEyebrow
       subtitulo="Crie disciplinas, importe texto ou JSON das provas e estude por disciplina ou com SRS. Com conta (opcional), a biblioteca sincroniza entre dispositivos."
       classNameHeroAcoes="hero__actions--compact-toolbar"
+      cabecalhoHeroEsquerda={!authLoading && !user ? <HomeGuestModeChip /> : undefined}
       acoes={
         <HomeHeaderMenu
           authLoading={authLoading}

@@ -11,6 +11,8 @@ type LayoutProps = {
   omitirEyebrow?: boolean;
   /** Modifier extra da barra de ações à direita (ex.: toolbar compacta na home). */
   classNameHeroAcoes?: string;
+  /** Conteúdo à esquerda da barra (tema + menu), antes deles — ex.: modo convidado no painel. */
+  cabecalhoHeroEsquerda?: ReactNode;
   acoes?: ReactNode;
   compactHeader?: ReactNode;
   children: ReactNode;
@@ -21,6 +23,7 @@ export function Layout({
   subtitulo,
   omitirEyebrow = false,
   classNameHeroAcoes,
+  cabecalhoHeroEsquerda,
   acoes,
   compactHeader,
   children,
@@ -57,6 +60,8 @@ export function Layout({
     );
   }
 
+  const usarBarraLiderTrailing = Boolean(cabecalhoHeroEsquerda);
+
   return (
     <div className="app-shell">
       <header className="hero">
@@ -69,28 +74,45 @@ export function Layout({
         </div>
         <div
           className={
-            classNameHeroAcoes ? `hero__actions ${classNameHeroAcoes}` : 'hero__actions'
+            ['hero__actions', classNameHeroAcoes, usarBarraLiderTrailing ? 'hero__actions--with-leading' : '']
+              .filter(Boolean)
+              .join(' ')
           }
         >
-          <button
-            type="button"
-            className="button button--secondary theme-toggle"
-            onClick={toggleTheme}
-            title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-            aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
-          >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          {acoes}
+          {usarBarraLiderTrailing ? (
+            <>
+              <div className="hero__actions-leading">{cabecalhoHeroEsquerda}</div>
+              <div className="hero__actions-trailing">
+                <button
+                  type="button"
+                  className="button button--secondary theme-toggle"
+                  onClick={toggleTheme}
+                  title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                  aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                >
+                  {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                </button>
+                {acoes}
+              </div>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="button button--secondary theme-toggle"
+                onClick={toggleTheme}
+                title={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+                aria-label={theme === 'dark' ? 'Ativar modo claro' : 'Ativar modo escuro'}
+              >
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+              </button>
+              {acoes}
+            </>
+          )}
         </div>
       </header>
 
-      <main
-        ref={mainRef}
-        id="conteudo-principal"
-        className="page-content"
-        tabIndex={-1}
-      >
+      <main ref={mainRef} id="conteudo-principal" className="page-content" tabIndex={-1}>
         {children}
       </main>
     </div>
